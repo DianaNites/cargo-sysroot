@@ -1,3 +1,11 @@
+//! Cargo-SysRoot
+//! Automatically compiles libcore and libcompiler_builtins before running cargo.
+//!
+//! Cargo.toml package.metadata.cargo-sysroot.target should be set
+//! to the path of a Target Specification
+//!
+//! The sysroot is located in target/sysroot
+//! TODO: Generate .cargo/config with rustflags.
 extern crate toml;
 
 use std::env;
