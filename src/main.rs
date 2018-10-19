@@ -1,6 +1,7 @@
 extern crate toml;
 
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -96,13 +97,26 @@ fn get_rust_src_dir() -> PathBuf {
     sysroot
 }
 
-fn compile_core() {
-    let mut libcore = get_rust_src_dir();
-    libcore.push("libcore");
-    libcore.push("Cargo.toml");
+/// Runs cargo build.
+/// The package located at rust_src/`name`/Cargo.toml will be built.
+fn build(name: &str, features: Option<&[&str]>) {
+    let mut lib = get_rust_src_dir();
+    lib.push(name);
+    lib.push("Cargo.toml");
+    let flags = {
+        let mut x = OsString::from("-Z no-landing-pads --sysroot ");
+        x.push(get_local_sysroot_dir().canonicalize().unwrap());
+        x
+    };
+    let features: Vec<_> = {
+        match features {
+            Some(fs) => fs.into_iter().collect(),
+            None => Default::default(),
+        }
+    };
 
-    let _ = get_rust_cmd("cargo")
-        .arg("build")
+    let mut x = get_rust_cmd("cargo");
+    x.arg("build")
         .arg("--out-dir")
         .arg(get_output_dir())
         .arg("--target-dir")
@@ -112,40 +126,17 @@ fn compile_core() {
         .arg("--release")
         .arg("-Z")
         .arg("unstable-options")
-        .env("RUSTFLAGS", "-Z no-landing-pads")
-        //
-        .arg("--manifest-path")
-        .arg(libcore)
-        .status();
-}
-
-fn compile_compiler_builtins() {
-    use std::ffi::OsString;
-    let mut builtins = get_rust_src_dir();
-    builtins.push("libcompiler_builtins");
-    builtins.push("Cargo.toml");
-
-    let mut flags = OsString::from("-Z no-landing-pads --sysroot ");
-    flags.push(get_local_sysroot_dir().canonicalize().unwrap());
-
-    let _ = get_rust_cmd("cargo")
-        .arg("build")
-        .arg("--out-dir")
-        .arg(get_output_dir())
-        .arg("--target-dir")
-        .arg(get_target_dir())
-        .arg("--target")
-        .arg(get_target())
-        .arg("--release")
-        .arg("-Z")
-        .arg("unstable-options")
-        .env("RUSTFLAGS", flags)
-        //
-        .arg("--features")
-        .arg("mem")
-        .arg("--manifest-path")
-        .arg(builtins)
-        .status();
+        .env("RUSTFLAGS", flags);
+    if !features.is_empty() {
+        x.arg("--features");
+        let mut s = String::new();
+        for f in features {
+            s.push_str(f.as_ref());
+        }
+        x.arg(s);
+    }
+    x.arg("--manifest-path").arg(lib);
+    let _ = x.status();
 }
 
 fn main() {
@@ -153,8 +144,8 @@ fn main() {
     let _ = env::set_current_dir(r#"C:\_Diana\Projects\diaos"#).unwrap();
     let target = get_target();
 
-    compile_core();
-    compile_compiler_builtins();
+    build("libcore", None);
+    build("libcompiler_builtins", Some(&["mem"]));
 
     println!("Target: {:#?}", target);
 }
