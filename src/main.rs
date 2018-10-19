@@ -38,7 +38,7 @@ fn get_target() -> PathBuf {
 fn get_local_sysroot_dir() -> PathBuf {
     let mut x = PathBuf::new();
     x.push("target");
-    x.push("_my_sysroot");
+    x.push("sysroot");
     fs::create_dir_all(&x).unwrap();
     x
 }
