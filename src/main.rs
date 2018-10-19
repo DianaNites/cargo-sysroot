@@ -141,8 +141,9 @@ fn build(name: &str, features: Option<&[&str]>) {
 
 fn main() {
     // HACK
-    let _ = env::set_current_dir(r#"C:\_Diana\Projects\diaos"#).unwrap();
+    // let _ = env::set_current_dir(r#"C:\_Diana\Projects\diaos"#).unwrap();
 
+    println!("Checking libcore and libcompiler_builtins");
     build("libcore", None);
     build("libcompiler_builtins", Some(&["mem"]));
 
