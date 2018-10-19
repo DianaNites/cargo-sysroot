@@ -38,6 +38,19 @@ fn get_local_sysroot_dir() -> PathBuf {
     let mut x = PathBuf::new();
     x.push("target");
     x.push("_my_sysroot");
+    fs::create_dir_all(&x).unwrap();
+    x
+}
+
+fn get_target_dir() -> PathBuf {
+    let mut x = get_local_sysroot_dir();
+    x.push("target");
+    x
+}
+
+/// The location IN the local sysroot for libcore and friends.
+fn get_output_dir() -> PathBuf {
+    let mut x = get_local_sysroot_dir();
     x.push("lib");
     x.push("rustlib");
     x.push(get_target().file_stem().unwrap());
@@ -91,9 +104,9 @@ fn compile_core() {
     let _ = get_rust_cmd("cargo")
         .arg("build")
         .arg("--out-dir")
-        .arg(get_local_sysroot_dir())
+        .arg(get_output_dir())
         .arg("--target-dir")
-        .arg(get_local_sysroot_dir())
+        .arg(get_target_dir())
         .arg("--target")
         .arg(get_target())
         .arg("--release")
@@ -106,12 +119,42 @@ fn compile_core() {
         .status();
 }
 
+fn compile_compiler_builtins() {
+    use std::ffi::OsString;
+    let mut builtins = get_rust_src_dir();
+    builtins.push("libcompiler_builtins");
+    builtins.push("Cargo.toml");
+
+    let mut flags = OsString::from("-Z no-landing-pads --sysroot ");
+    flags.push(get_local_sysroot_dir().canonicalize().unwrap());
+
+    let _ = get_rust_cmd("cargo")
+        .arg("build")
+        .arg("--out-dir")
+        .arg(get_output_dir())
+        .arg("--target-dir")
+        .arg(get_target_dir())
+        .arg("--target")
+        .arg(get_target())
+        .arg("--release")
+        .arg("-Z")
+        .arg("unstable-options")
+        .env("RUSTFLAGS", flags)
+        //
+        .arg("--features")
+        .arg("mem")
+        .arg("--manifest-path")
+        .arg(builtins)
+        .status();
+}
+
 fn main() {
     // HACK
     let _ = env::set_current_dir(r#"C:\_Diana\Projects\diaos"#).unwrap();
     let target = get_target();
 
     compile_core();
+    compile_compiler_builtins();
 
     println!("Target: {:#?}", target);
 }
