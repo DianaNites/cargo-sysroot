@@ -146,5 +146,7 @@ fn main() {
     build("libcore", None);
     build("libcompiler_builtins", Some(&["mem"]));
 
-    println!("Target: {:#?}", target);
+    let _ = Command::new(env::var_os("CARGO").unwrap())
+        .args(env::args_os().skip(2))
+        .status();
 }
