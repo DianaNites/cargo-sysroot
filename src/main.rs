@@ -142,7 +142,6 @@ fn build(name: &str, features: Option<&[&str]>) {
 fn main() {
     // HACK
     let _ = env::set_current_dir(r#"C:\_Diana\Projects\diaos"#).unwrap();
-    let target = get_target();
 
     build("libcore", None);
     build("libcompiler_builtins", Some(&["mem"]));
