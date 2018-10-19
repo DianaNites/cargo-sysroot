@@ -46,20 +46,29 @@ fn get_local_sysroot_dir() -> PathBuf {
     x
 }
 
-/// Rustc needs some configuration to work correctly.
-/// Unless the undocumented enviroment variable "RUSTUP_TOOLCHAIN" is removed
-/// Rustup directory overrides won't work.
-fn get_rustc() -> Command {
-    let mut cmd = Command::new("rustc");
-    cmd.env_remove("RUSTUP_TOOLCHAIN")
-        .current_dir(env::current_dir().unwrap());
+/// Use rustup which to find the correct executable.
+/// Unless the undocumented? enviroment variable "RUSTUP_TOOLCHAIN" is removed
+/// Rustup directory overrides won't work, for any tool.
+fn get_rust_cmd(name: &str) -> Command {
+    let rw = Command::new("rustup")
+        .arg("which")
+        .arg(name)
+        .env_remove("RUSTUP_TOOLCHAIN")
+        .output()
+        .unwrap();
+    let mut cmd = Command::new(PathBuf::from(str::from_utf8(&rw.stdout).unwrap().trim()));
+    cmd.env_remove("RUSTUP_TOOLCHAIN");
     cmd
 }
 
 /// Get the configured rustc sysroot.
 /// This is the HOST sysroot.
 fn get_rustc_sysroot() -> PathBuf {
-    let rustc = get_rustc().arg("--print").arg("sysroot").output().unwrap();
+    let rustc = get_rust_cmd("rustc")
+        .arg("--print")
+        .arg("sysroot")
+        .output()
+        .unwrap();
     PathBuf::from(str::from_utf8(&rustc.stdout).unwrap().trim())
 }
 
@@ -77,22 +86,22 @@ fn get_rust_src_dir() -> PathBuf {
 fn compile_core() {
     let mut libcore = get_rust_src_dir();
     libcore.push("libcore");
-    libcore.push("lib.rs");
+    libcore.push("Cargo.toml");
 
-    let _ = get_rustc()
+    let _ = get_rust_cmd("cargo")
+        .arg("build")
         .arg("--out-dir")
+        .arg(get_local_sysroot_dir())
+        .arg("--target-dir")
         .arg(get_local_sysroot_dir())
         .arg("--target")
         .arg(get_target())
-        .arg("-O")
-        .arg("-g")
-        .arg("--crate-type")
-        .arg("rlib")
-        .arg("--crate-name")
-        .arg("core")
+        .arg("--release")
         .arg("-Z")
-        .arg("no-landing-pads")
+        .arg("unstable-options")
+        .env("RUSTFLAGS", "-Z no-landing-pads")
         //
+        .arg("--manifest-path")
         .arg(libcore)
         .status();
 }
