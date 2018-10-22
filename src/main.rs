@@ -19,6 +19,9 @@ use std::process::Command;
 use std::str;
 use toml::Value;
 
+mod util;
+use util::*;
+
 /// Read the target specification to use.
 /// This is located in Cargo.toml.
 /// target can be a relative or absolute path.
@@ -44,69 +47,6 @@ fn get_target() -> PathBuf {
     PathBuf::from(target)
 }
 
-/// The location the new sysroot will be at.
-fn get_local_sysroot_dir() -> PathBuf {
-    let mut x = PathBuf::new();
-    x.push("target");
-    x.push("sysroot");
-    fs::create_dir_all(&x).unwrap();
-    x
-}
-
-fn get_target_dir() -> PathBuf {
-    let mut x = get_local_sysroot_dir();
-    x.push("target");
-    x
-}
-
-/// The location IN the local sysroot for libcore and friends.
-fn get_output_dir() -> PathBuf {
-    let mut x = get_local_sysroot_dir();
-    x.push("lib");
-    x.push("rustlib");
-    x.push(get_target().file_stem().unwrap());
-    x.push("lib");
-    fs::create_dir_all(&x).unwrap();
-    x
-}
-
-/// Use rustup which to find the correct executable.
-/// Unless the undocumented? enviroment variable "RUSTUP_TOOLCHAIN" is removed
-/// Rustup directory overrides won't work, for any tool.
-fn get_rust_cmd(name: &str) -> Command {
-    let rw = Command::new("rustup")
-        .arg("which")
-        .arg(name)
-        .env_remove("RUSTUP_TOOLCHAIN")
-        .output()
-        .unwrap();
-    let mut cmd = Command::new(PathBuf::from(str::from_utf8(&rw.stdout).unwrap().trim()));
-    cmd.env_remove("RUSTUP_TOOLCHAIN");
-    cmd
-}
-
-/// Get the configured rustc sysroot.
-/// This is the HOST sysroot.
-fn get_rustc_sysroot() -> PathBuf {
-    let rustc = get_rust_cmd("rustc")
-        .arg("--print")
-        .arg("sysroot")
-        .output()
-        .unwrap();
-    PathBuf::from(str::from_utf8(&rustc.stdout).unwrap().trim())
-}
-
-/// Get the rust-src component of the host sysroot.
-fn get_rust_src_dir() -> PathBuf {
-    let mut sysroot = get_rustc_sysroot();
-    sysroot.push("lib");
-    sysroot.push("rustlib");
-    sysroot.push("src");
-    sysroot.push("rust");
-    sysroot.push("src");
-    sysroot
-}
-
 /// Stuff the build command needs.
 struct BuildConfig {
     rust_src: PathBuf,
@@ -118,12 +58,14 @@ struct BuildConfig {
 
 impl BuildConfig {
     fn new() -> Self {
+        let sysroot = get_local_sysroot_dir();
+        let target = get_target();
         Self {
             rust_src: get_rust_src_dir(),
-            local_sysroot: get_local_sysroot_dir().canonicalize().unwrap(),
-            target: get_target(),
-            target_dir: get_target_dir(),
-            output_dir: get_output_dir(),
+            target_dir: get_target_dir(sysroot.clone()),
+            output_dir: get_output_dir(sysroot.clone(), &target),
+            local_sysroot: sysroot,
+            target: target,
         }
     }
 }
