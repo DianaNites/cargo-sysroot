@@ -2,7 +2,10 @@
 name = "cargo-sysroot"
 version = "0.1.0"
 authors = ["Diana"]
+#
 readme = "README.md"
+repository = "https://github.com/HobbyistRust/cargo-sysroot"
+description = "Cargo-SysRoot"
 
 [dependencies]
 toml = "0.4.8"
