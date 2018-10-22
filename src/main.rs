@@ -107,15 +107,36 @@ fn get_rust_src_dir() -> PathBuf {
     sysroot
 }
 
+/// Stuff the build command needs.
+struct BuildConfig {
+    rust_src: PathBuf,
+    local_sysroot: PathBuf,
+    target: PathBuf,
+    target_dir: PathBuf,
+    output_dir: PathBuf,
+}
+
+impl BuildConfig {
+    fn new() -> Self {
+        Self {
+            rust_src: get_rust_src_dir(),
+            local_sysroot: get_local_sysroot_dir().canonicalize().unwrap(),
+            target: get_target(),
+            target_dir: get_target_dir(),
+            output_dir: get_output_dir(),
+        }
+    }
+}
+
 /// Runs cargo build.
 /// The package located at rust_src/`name`/Cargo.toml will be built.
-fn build(name: &str, features: Option<&[&str]>) {
-    let mut lib = get_rust_src_dir();
+fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
+    let mut lib = cfg.rust_src.clone();
     lib.push(name);
     lib.push("Cargo.toml");
     let flags = {
         let mut x = OsString::from("-Z no-landing-pads --sysroot ");
-        x.push(get_local_sysroot_dir().canonicalize().unwrap());
+        x.push(&cfg.local_sysroot);
         x
     };
     let features: Vec<_> = {
@@ -128,11 +149,11 @@ fn build(name: &str, features: Option<&[&str]>) {
     let mut x = get_rust_cmd("cargo");
     x.arg("build")
         .arg("--out-dir")
-        .arg(get_output_dir())
+        .arg(&cfg.output_dir)
         .arg("--target-dir")
-        .arg(get_target_dir())
+        .arg(&cfg.target_dir)
         .arg("--target")
-        .arg(get_target())
+        .arg(&cfg.target)
         .arg("--release")
         .arg("-Z")
         .arg("unstable-options")
@@ -153,8 +174,9 @@ fn main() {
     println!("Checking libcore and libcompiler_builtins");
     // TODO: Eat output if up to date.
     // TODO: Generate .cargo/config with rustflags.
-    build("libcore", None);
-    build("libcompiler_builtins", Some(&["mem"]));
+    let cfg = BuildConfig::new();
+    build("libcore", None, &cfg);
+    build("libcompiler_builtins", Some(&["mem"]), &cfg);
 
     // TODO: Process help command.
     let _ = Command::new(env::var_os("CARGO").unwrap())
