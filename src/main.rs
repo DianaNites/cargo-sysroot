@@ -5,7 +5,9 @@
 //! to the path of a Target Specification
 //!
 //! The sysroot is located in target/sysroot
-//! TODO: Generate .cargo/config with rustflags.
+//!
+//! Cargo will automatically rebuild the project and all dependencies
+//! if the files in the sysroot change.
 extern crate toml;
 
 use std::env;
@@ -148,14 +150,15 @@ fn build(name: &str, features: Option<&[&str]>) {
 }
 
 fn main() {
-    // HACK
-    // let _ = env::set_current_dir(r#"C:\_Diana\Projects\diaos"#).unwrap();
-
     println!("Checking libcore and libcompiler_builtins");
+    // TODO: Eat output if up to date.
+    // TODO: Generate .cargo/config with rustflags.
     build("libcore", None);
     build("libcompiler_builtins", Some(&["mem"]));
 
+    // TODO: Process help command.
     let _ = Command::new(env::var_os("CARGO").unwrap())
+        // Skip self program and our subcommand.
         .args(env::args_os().skip(2))
         .status();
 }
