@@ -6,6 +6,7 @@ authors = ["Diana"]
 readme = "README.md"
 repository = "https://github.com/HobbyistRust/cargo-sysroot"
 description = "Cargo-SysRoot"
+license = "UNLICENSED"
 
 [dependencies]
 toml = "0.4.8"
