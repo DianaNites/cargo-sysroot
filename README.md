@@ -32,6 +32,10 @@ This will allow Cargo to properly build your project with or without cargo-sysro
 If you update your Rust nightly version you will need to run cargo-sysroot again.
 Note that doing this will cause cargo to detect that libcore has changed and rebuild your entire project.
 
+## Limitations
+
+* Liballoc is currently unsupported.
+
 ## License
 
 Licensed under either of
