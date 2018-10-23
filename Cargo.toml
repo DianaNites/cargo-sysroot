@@ -1,12 +1,27 @@
 [package]
 name = "cargo-sysroot"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Diana"]
 #
 readme = "README.md"
 repository = "https://github.com/HobbyistRust/cargo-sysroot"
 description = "Cargo-SysRoot"
 license = "MIT"
+keywords = [
+    "sysroot",
+    "libcore",
+    "core",
+    "no_std",
+]
+categories = [
+    "no-std",
+    "embedded",
+    "development-tools",
+    "development-tools::cargo-plugins",
+]
 
 [dependencies]
 toml = "0.4.8"
+
+[badges]
+maintenance = { status = "as-is" }
