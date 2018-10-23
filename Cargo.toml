@@ -6,7 +6,7 @@ authors = ["Diana"]
 readme = "README.md"
 repository = "https://github.com/HobbyistRust/cargo-sysroot"
 description = "Cargo-SysRoot"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 keywords = [
     "sysroot",
     "libcore",
