@@ -2,6 +2,12 @@
 
 A (dumb) tool to automatically compile libcore and friends for no_std crates.
 
+## Note
+
+Seems to be broken on the latest nightly as of 2018-10-23
+
+Unknown why, it worked for the last one. Rip.
+
 ## Getting Started
 
 Run `cargo install cargo-sysroot`.
