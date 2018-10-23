@@ -19,10 +19,30 @@ use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
-use toml::Value;
 
 mod util;
 use util::*;
+
+#[derive(Deserialize, Debug, Serialize)]
+struct CargoToml {
+    package: Package,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+struct Package {
+    metadata: Metadata,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+struct Metadata {
+    #[serde(rename = "cargo-sysroot")]
+    cargo_sysroot: CargoSysroot,
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+struct CargoSysroot {
+    target: PathBuf,
+}
 
 /// Read the target specification to use.
 /// This is located in Cargo.toml.
@@ -42,11 +62,8 @@ fn get_target() -> PathBuf {
             .unwrap();
         s
     };
-    let target = toml.parse::<Value>().unwrap();
-    let target = target["package"]["metadata"]["cargo-sysroot"]["target"]
-        .as_str()
-        .unwrap();
-    PathBuf::from(target)
+    let target: CargoToml = toml::from_str(&toml).unwrap();
+    target.package.metadata.cargo_sysroot.target
 }
 
 /// Stuff the build command needs.
@@ -115,7 +132,7 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Config {
+struct CargoBuild {
     build: Build,
 }
 
@@ -132,7 +149,7 @@ fn generate_cargo_config(cfg: &BuildConfig) {
         return;
     }
 
-    let config = Config {
+    let config = CargoBuild {
         build: Build {
             rustflags: vec![
                 "--sysroot".to_owned(),
