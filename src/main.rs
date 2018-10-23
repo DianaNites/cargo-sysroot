@@ -9,6 +9,8 @@
 //! Cargo will automatically rebuild the project and all dependencies
 //! if the files in the sysroot change.
 extern crate toml;
+#[macro_use]
+extern crate serde_derive;
 
 use std::env;
 use std::ffi::OsString;
@@ -112,13 +114,50 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
     let _ = x.status();
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct Config {
+    build: Build,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Build {
+    rustflags: Vec<String>,
+}
+
+fn generate_cargo_config(cfg: &BuildConfig) {
+    let path = PathBuf::from(".cargo/config");
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    if path.exists() {
+        // TODO: Be smarter, update existing. Warn?
+        return;
+    }
+
+    let config = Config {
+        build: Build {
+            rustflags: vec![
+                "--sysroot".to_owned(),
+                format!("{}", cfg.local_sysroot.to_str().unwrap()),
+            ],
+        },
+    };
+    let toml = toml::to_string(&config).unwrap();
+    println!("{}", toml);
+
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .unwrap();
+    f.write_all(toml.as_bytes()).unwrap();
+}
+
 fn main() {
     println!("Checking libcore and libcompiler_builtins");
     // TODO: Eat output if up to date.
-    // TODO: Generate .cargo/config with rustflags.
     let cfg = BuildConfig::new();
     build("libcore", None, &cfg);
     build("libcompiler_builtins", Some(&["mem"]), &cfg);
+    generate_cargo_config(&cfg);
 
     // TODO: Process help command.
     let _ = Command::new(env::var_os("CARGO").unwrap())

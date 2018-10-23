@@ -22,6 +22,8 @@ categories = [
 
 [dependencies]
 toml = "0.4.8"
+serde_derive = "1.0.80"
+serde = "1.0.80"
 
 [badges]
 maintenance = { status = "as-is" }
