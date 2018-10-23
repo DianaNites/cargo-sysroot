@@ -1,6 +1,6 @@
 [[package]]
 name = "cargo-sysroot"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "toml 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
