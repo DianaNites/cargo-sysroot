@@ -15,7 +15,7 @@ isn't a very smart tool. It makes no attempt to understand Cargo's commandline,
 it will simply attempt to build libcore using Cargo.
 Since Cargo is used to build them, this means they won't be needlessly rebuilt.
 
-This tool will (TODO, not yet implemented) generate a .cargo/config for you that looks something like this
+This tool will generate a .cargo/config for you that looks something like this
 
 ```toml
 [build]
@@ -25,6 +25,8 @@ rustflags = [
     "full/path/to/target/sysroot",
 ]
 ```
+
+Note that this tool is currently quite stupid, so it won't attempt to do anything if that file already exists.
 
 This will allow Cargo to properly build your project with or without cargo-sysroot.
 If you update your Rust nightly version you will need to run cargo-sysroot again.
