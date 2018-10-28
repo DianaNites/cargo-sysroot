@@ -141,7 +141,8 @@ fn main() {
     println!("Checking libcore and libcompiler_builtins");
     // TODO: Eat output if up to date.
     let cfg = BuildConfig::new();
+    generate_cargo_config(&cfg);
+
     build("libcore", None, &cfg);
     build("libcompiler_builtins", Some(&["mem"]), &cfg);
-    generate_cargo_config(&cfg);
 }
