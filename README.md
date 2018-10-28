@@ -45,7 +45,7 @@ should not need to be changed, as the base path it uses is not target specific.
 
 Note that this tool is currently quite stupid, so it won't attempt to do anything if that file already exists.
 
-This will allow Cargo to properly build your project with the normal commands such as `cargo build`
+This will allow Cargo to properly build your project with the normal commands such as `cargo build`.
 You may wish to modify this file to make use of the `target.$triple.runner` key. See the [Cargo Documentation](https://doc.rust-lang.org/cargo/reference/config.html#configuration-keys) for details.
 Note that the author experienced problems with the $triple variant not working, and you may experience better success with the cfg variant.
 
