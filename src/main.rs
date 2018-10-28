@@ -127,7 +127,6 @@ fn generate_cargo_config(cfg: &BuildConfig) {
         },
     };
     let toml = toml::to_string(&config).unwrap();
-    println!("{}", toml);
 
     let mut f = fs::OpenOptions::new()
         .write(true)
