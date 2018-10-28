@@ -2,18 +2,14 @@
 
 A (dumb) tool to compile libcore and friends for no_std crates.
 
-## Note
-
-Seems to be broken on the latest nightly as of 2018-10-23
-
-Unknown why, it worked for the last one. Rip.
+This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool you call once.
 
 ## Prerequisite
 
 * A nightly compiler.
 * The `rust-src` component must be installed for the active toolchain.
 * Your `Cargo.toml` file must contain `package.metadata.cargo-sysroot.target`, where target is a target specifiction json file.
-    * A rust supported target should also work, but this is untested.
+    * A rust supported target may also work, but this is untested.
 
 ### Example `Cargo.toml`
 
@@ -42,6 +38,10 @@ rustflags = [
     "full/path/to/target/sysroot",
 ]
 ```
+
+The sysroot will be located at `target/sysroot` and the libcore target directory at `target/sysroot/target`.
+Multiple target specifictions are supported and will not conflict, and due to the way rust uses the sysroot your generated `.cargo/config`
+should not need to be changed, as the base path it uses is not target specific.
 
 Note that this tool is currently quite stupid, so it won't attempt to do anything if that file already exists.
 
