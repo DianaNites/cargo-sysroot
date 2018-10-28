@@ -12,10 +12,11 @@ extern crate toml;
 #[macro_use]
 extern crate serde_derive;
 
-use std::ffi::OsString;
+use std::env;
 use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::str;
 
 mod config;
@@ -71,12 +72,10 @@ impl BuildConfig {
 /// Runs cargo build.
 /// The package located at rust_src/`name`/Cargo.toml will be built.
 fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
-    let mut lib = cfg.rust_src.clone();
-    lib.push(name);
-    lib.push("Cargo.toml");
-    let flags = {
-        let mut x = OsString::from("-Z no-landing-pads --sysroot ");
-        x.push(&cfg.local_sysroot);
+    let lib = {
+        let mut x = cfg.rust_src.clone();
+        x.push(name);
+        x.push("Cargo.toml");
         x
     };
     let features: Vec<_> = {
@@ -85,29 +84,42 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
             None => Default::default(),
         }
     };
-
-    let mut x = get_rust_cmd("cargo");
-    x.arg("build")
-        .arg("--out-dir")
-        .arg(&cfg.output_dir)
-        .arg("--target-dir")
-        .arg(&cfg.target_dir)
+    let mut cmd = Command::new(env::var_os("CARGO").unwrap());
+    cmd.arg("rustc") //
+        .arg("--release")
         .arg("--target")
         .arg(&cfg.target)
-        .arg("--release")
+        .arg("--target-dir")
+        .arg(&cfg.target_dir)
+        .arg("--manifest-path")
+        .arg(lib)
         .arg("-Z")
-        .arg("unstable-options")
-        .env("RUSTFLAGS", flags);
+        .arg("unstable-options");
     if !features.is_empty() {
-        x.arg("--features");
+        cmd.arg("--features");
         let mut s = String::new();
-        for f in features {
-            s.push_str(f.as_ref());
-        }
-        x.arg(s);
+        features.into_iter().for_each(|x| s.push_str(x));
+        cmd.arg(s);
     }
-    x.arg("--manifest-path").arg(lib);
-    let _ = x.status();
+    cmd.arg("--") // Pass to rusc directly.
+        .arg("-Z")
+        .arg("no-landing-pads");
+    let _ = cmd.status().unwrap();
+    //
+    let rlib = {
+        let mut x = cfg.target_dir.clone();
+        x.push(cfg.target.file_stem().unwrap());
+        x.push(name);
+        x.set_extension("rlib");
+        x
+    };
+    let out = {
+        let mut x = cfg.output_dir.clone();
+        x.push(name);
+        x.set_extension("rlib");
+        x
+    };
+    let _ = fs::copy(rlib, out).unwrap();
 }
 
 fn generate_cargo_config(cfg: &BuildConfig) {
