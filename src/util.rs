@@ -65,7 +65,6 @@ pub fn copy_host_tools(mut local_sysroot: PathBuf) {
         .skip(1)
         .collect::<Vec<_>>()
         .join("-");
-    println!("{:#?}", host);
     local_sysroot.push("lib");
     local_sysroot.push("rustlib");
     local_sysroot.push(&host);
