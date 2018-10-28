@@ -1,4 +1,5 @@
 //! Utility.
+use fs_extra::dir::{copy, CopyOptions};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -50,4 +51,32 @@ pub fn get_output_dir<T: AsRef<Path>>(mut base: PathBuf, target: T) -> PathBuf {
     base.push("lib");
     fs::create_dir_all(&base).unwrap();
     base
+}
+
+/// Host tools such as rust-lld need to be in the sysroot to link correctly.
+pub fn copy_host_tools(mut local_sysroot: PathBuf) {
+    let mut root = get_rustc_sysroot();
+    let host = root
+        .file_stem()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split('-')
+        .skip(1)
+        .collect::<Vec<_>>()
+        .join("-");
+    println!("{:#?}", host);
+    local_sysroot.push("lib");
+    local_sysroot.push("rustlib");
+    local_sysroot.push(&host);
+    let options = CopyOptions::new();
+    let src = {
+        root.push("lib");
+        root.push("rustlib");
+        root.push(&host);
+        root.push("bin");
+        root
+    };
+    fs::create_dir_all(&local_sysroot).unwrap();
+    copy(src, local_sysroot, &options).unwrap();
 }
