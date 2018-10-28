@@ -24,6 +24,7 @@ categories = [
 toml = "0.4.8"
 serde_derive = "1.0.80"
 serde = "1.0.80"
+fs_extra = "1.1.0"
 
 [badges]
 maintenance = { status = "as-is" }
