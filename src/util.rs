@@ -7,27 +7,12 @@ use std::str;
 /// Get the configured rustc sysroot.
 /// This is the HOST sysroot.
 fn get_rustc_sysroot() -> PathBuf {
-    let rustc = get_rust_cmd("rustc")
+    let rustc = Command::new("rustc")
         .arg("--print")
         .arg("sysroot")
         .output()
         .unwrap();
     PathBuf::from(str::from_utf8(&rustc.stdout).unwrap().trim())
-}
-
-/// Use rustup which to find the correct executable.
-/// Unless the undocumented? enviroment variable "RUSTUP_TOOLCHAIN" is removed
-/// Rustup directory overrides won't work, for any tool.
-pub fn get_rust_cmd(name: &str) -> Command {
-    let rw = Command::new("rustup")
-        .arg("which")
-        .arg(name)
-        .env_remove("RUSTUP_TOOLCHAIN")
-        .output()
-        .unwrap();
-    let mut cmd = Command::new(PathBuf::from(str::from_utf8(&rw.stdout).unwrap().trim()));
-    cmd.env_remove("RUSTUP_TOOLCHAIN");
-    cmd
 }
 
 /// Get the rust-src component of the host sysroot.
