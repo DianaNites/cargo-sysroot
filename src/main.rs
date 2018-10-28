@@ -109,6 +109,7 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
     let rlib = {
         let mut x = cfg.target_dir.clone();
         x.push(cfg.target.file_stem().unwrap());
+        x.push("release");
         x.push(name);
         x.set_extension("rlib");
         x
