@@ -20,29 +20,10 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
 
+mod config;
 mod util;
+use config::*;
 use util::*;
-
-#[derive(Deserialize, Debug, Serialize)]
-struct CargoToml {
-    package: Package,
-}
-
-#[derive(Deserialize, Debug, Serialize)]
-struct Package {
-    metadata: Metadata,
-}
-
-#[derive(Deserialize, Debug, Serialize)]
-struct Metadata {
-    #[serde(rename = "cargo-sysroot")]
-    cargo_sysroot: CargoSysroot,
-}
-
-#[derive(Deserialize, Debug, Serialize)]
-struct CargoSysroot {
-    target: PathBuf,
-}
 
 /// Read the target specification to use.
 /// This is located in Cargo.toml.
@@ -129,16 +110,6 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
     }
     x.arg("--manifest-path").arg(lib);
     let _ = x.status();
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct CargoBuild {
-    build: Build,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Build {
-    rustflags: Vec<String>,
 }
 
 fn generate_cargo_config(cfg: &BuildConfig) {
