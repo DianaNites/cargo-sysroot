@@ -10,6 +10,7 @@ Unknown why, it worked for the last one. Rip.
 
 ## Prerequisite
 
+* A nightly compiler.
 * The `rust-src` component must be installed for the active toolchain.
 * Your `Cargo.toml` file must contain `package.metadata.cargo-sysroot.target`, where target is a target specifiction json file.
     * A rust supported target should also work, but this is untested.
