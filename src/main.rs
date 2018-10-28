@@ -1,5 +1,5 @@
 //! Cargo-SysRoot
-//! Automatically compiles libcore and libcompiler_builtins before running cargo.
+//! Compiles libcore and libcompiler_builtins.
 //!
 //! Cargo.toml package.metadata.cargo-sysroot.target should be set
 //! to the path of a Target Specification
@@ -12,12 +12,10 @@ extern crate toml;
 #[macro_use]
 extern crate serde_derive;
 
-use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::str;
 
 mod config;
@@ -146,10 +144,4 @@ fn main() {
     build("libcore", None, &cfg);
     build("libcompiler_builtins", Some(&["mem"]), &cfg);
     generate_cargo_config(&cfg);
-
-    // TODO: Process help command.
-    let _ = Command::new(env::var_os("CARGO").unwrap())
-        // Skip self program and our subcommand.
-        .args(env::args_os().skip(2))
-        .status();
 }
