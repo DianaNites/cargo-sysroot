@@ -159,8 +159,5 @@ fn main() {
     build("libcore", None, &cfg);
     build("libcompiler_builtins", Some(&["mem"]), &cfg);
 
-    // TODO: This will always copy, which is a waste.
-    // But can't skip existing, because then updates to the host tools wont be copied.
-    // Should just compare last modifed times.
     copy_host_tools(cfg.local_sysroot.clone());
 }

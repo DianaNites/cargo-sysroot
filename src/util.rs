@@ -69,7 +69,6 @@ pub fn copy_host_tools(mut local_sysroot: PathBuf) {
     local_sysroot.push("lib");
     local_sysroot.push("rustlib");
     local_sysroot.push(&host);
-    let options = CopyOptions::new();
     let src = {
         root.push("lib");
         root.push("rustlib");
@@ -77,6 +76,17 @@ pub fn copy_host_tools(mut local_sysroot: PathBuf) {
         root.push("bin");
         root
     };
+    let srcm = fs::metadata(&src).unwrap();
+    let tom = fs::metadata(&local_sysroot);
+    // If our host tools bin dir doesn't exist it always needs updating.
+    if let Ok(tom) = tom {
+        // If our sysroot is older than the installed component we need to update
+        // A newer rust-src should always have a newer modifed time.
+        // Whereas we should always have a newer modifed time if we're up to date.
+        if tom.modified().unwrap() > srcm.modified().unwrap() {
+            return;
+        }
+    }
     fs::create_dir_all(&local_sysroot).unwrap();
-    copy(src, local_sysroot, &options).unwrap();
+    copy(src, local_sysroot, &CopyOptions::new()).unwrap();
 }
