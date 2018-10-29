@@ -1,5 +1,7 @@
 # Cargo-sysroot
 
+[![Crates.io](https://img.shields.io/crates/v/cargo-sysroot.svg)](https://crates.io/crates/cargo-sysroot)
+
 A (dumb) tool to compile libcore and friends for no_std crates.
 
 This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool you call once.
