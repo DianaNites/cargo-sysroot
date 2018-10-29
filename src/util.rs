@@ -87,5 +87,7 @@ pub fn copy_host_tools(mut local_sysroot: PathBuf) {
         }
     }
     fs::create_dir_all(&local_sysroot).unwrap();
-    copy(src, local_sysroot, &CopyOptions::new()).unwrap();
+    let mut options = CopyOptions::new();
+    options.overwrite = true;
+    copy(src, local_sysroot, &options).unwrap();
 }
