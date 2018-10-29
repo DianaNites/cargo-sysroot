@@ -54,6 +54,17 @@ Note that the author experienced problems with the $triple variant not working, 
 If you update your Rust nightly version you will need to run `cargo-sysroot` again.
 Note that doing this will cause cargo to detect that libcore has changed and rebuild your entire project.
 
+## Details
+
+libcore and friends are compiled with the `--release` switch.
+libcompilter_builtins is built with the `mem` feature, which provides `memcpy` and friends.
+
+## TODO
+
+* Allow specifying a custom `rust-src`.
+* Allow disabling the `mem` feature.
+* Liballoc.
+
 ## Limitations
 
 * Liballoc is currently unsupported.
