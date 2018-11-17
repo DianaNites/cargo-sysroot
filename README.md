@@ -12,6 +12,7 @@ This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool 
 * The `rust-src` component must be installed for the active toolchain.
 * Your `Cargo.toml` file must contain `package.metadata.cargo-sysroot.target`, where target is a target specifiction json file.
     * A rust supported target may also work, but this is untested.
+* OR Pass `--target` on the commandline, ex `cargo sysroot --target path/to/target.json`
 
 ### Example `Cargo.toml`
 
@@ -53,6 +54,10 @@ Note that the author experienced problems with the $triple variant not working, 
 
 If you update your Rust nightly version you will need to run `cargo-sysroot` again.
 Note that doing this will cause cargo to detect that libcore has changed and rebuild your entire project.
+
+## Recomendations
+
+It is recomended you use a tool such as [cargo-make](https://crates.io/crates/cargo-make) if you want to automate this and other pre/post build tasks.
 
 ## Details
 
