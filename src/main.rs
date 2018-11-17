@@ -15,7 +15,7 @@ extern crate serde_derive;
 extern crate clap;
 extern crate fs_extra;
 
-use clap::{App, Arg, SubCommand};
+use clap::Arg;
 use std::env;
 use std::fs;
 use std::io::prelude::*;
