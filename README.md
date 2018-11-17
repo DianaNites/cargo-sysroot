@@ -1,6 +1,7 @@
 # Cargo-sysroot
 
 [![Crates.io](https://img.shields.io/crates/v/cargo-sysroot.svg)](https://crates.io/crates/cargo-sysroot)
+![maintenance-as-is](https://img.shields.io/badge/maintenance-as--is-yellow.svg)
 
 A (dumb) tool to compile libcore and friends for no_std crates.
 

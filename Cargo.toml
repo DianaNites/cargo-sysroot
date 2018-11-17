@@ -5,7 +5,7 @@ authors = ["Diana"]
 #
 readme = "README.md"
 repository = "https://github.com/HobbyistRust/cargo-sysroot"
-description = "Cargo-SysRoot, cross-compile the Rust sysroot crates"
+description = "Simply and Easily cross-compile the Rust sysroot crates."
 license = "MIT OR Apache-2.0"
 keywords = [
     "sysroot",
