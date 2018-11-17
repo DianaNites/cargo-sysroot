@@ -161,6 +161,7 @@ fn generate_cargo_config(cfg: &BuildConfig) {
 
     let config = CargoBuild {
         build: Build {
+            target: cfg.target.canonicalize().unwrap(),
             rustflags: vec![
                 "--sysroot".to_owned(),
                 format!("{}", cfg.local_sysroot.to_str().unwrap()),

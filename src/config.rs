@@ -32,4 +32,5 @@ pub struct CargoBuild {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Build {
     pub rustflags: Vec<String>,
+    pub target: PathBuf,
 }
