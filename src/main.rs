@@ -46,7 +46,8 @@ fn parse_args() -> Option<String> {
                         .takes_value(true),
                 ),
         ).get_matches();
-    args.value_of("target").map(|s| s.to_string())
+    args.subcommand_matches("sysroot")
+        .and_then(|x| x.value_of("target").map(|s| s.to_string()))
 }
 
 /// Read the target specification to use.
