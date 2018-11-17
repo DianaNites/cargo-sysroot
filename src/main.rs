@@ -22,8 +22,8 @@ use std::str;
 
 mod config;
 mod util;
-use config::*;
-use util::*;
+use crate::config::*;
+use crate::util::*;
 
 /// Read the target specification to use.
 /// This is located in Cargo.toml.
