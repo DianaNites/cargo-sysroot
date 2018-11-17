@@ -77,7 +77,7 @@ libcompilter_builtins is built with the `mem` feature, which provides `memcpy` a
 
 ## FAQ
 
-* Q: Why are all versions before 0.4.0 yanked?
+* Q: Why are all versions before 0.4.1 yanked?
 * A: They didn't work correctly or at all because i didnt test properly. Oops.
 
 ## License
