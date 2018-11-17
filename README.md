@@ -51,14 +51,14 @@ Note that this tool is currently quite stupid, so it won't attempt to do anythin
 
 This will allow Cargo to properly build your project with the normal commands such as `cargo build`.
 You may wish to modify this file to make use of the `target.$triple.runner` key. See the [Cargo Documentation](https://doc.rust-lang.org/cargo/reference/config.html#configuration-keys) for details.
-Note that the author experienced problems with the $triple variant not working, and you may experience better success with the cfg variant.
+Note that the author experienced problems with the `$triple` variant not working, and you may experience better success with the `cfg` variant.
 
 If you update your Rust nightly version you will need to run `cargo-sysroot` again.
 Note that doing this will cause cargo to detect that libcore has changed and rebuild your entire project.
 
 ## Recomendations
 
-It is recomended you use a tool such as [cargo-make](https://crates.io/crates/cargo-make) if you want to automate this and other pre/post build tasks.
+If you have more complicated needs than can be satisfied by `target.$triple.runner`, which doesn't yet support passing arguments, the author recommends using a tool such as [cargo-make](https://crates.io/crates/cargo-make).
 
 ## Details
 
@@ -78,7 +78,7 @@ libcompilter_builtins is built with the `mem` feature, which provides `memcpy` a
 ## FAQ
 
 * Q: Why are all versions before 0.4.1 yanked?
-* A: They didn't work correctly or at all because i didnt test properly. Oops.
+* A: They didn't work correctly or at all because I didnt test properly. Oops.
 
 ## License
 
