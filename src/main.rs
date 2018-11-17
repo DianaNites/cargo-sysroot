@@ -31,8 +31,9 @@ use crate::util::*;
 /// Returns Some is target was passed on the commandline, None otherwise.
 fn parse_args() -> Option<String> {
     let args = app_from_crate!()
+        .bin_name("cargo")
         .arg(
-            Arg::with_name("target") //
+            Arg::with_name("target")
                 .long("target")
                 .empty_values(false)
                 .takes_value(true),
