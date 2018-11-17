@@ -15,7 +15,7 @@ extern crate serde_derive;
 extern crate clap;
 extern crate fs_extra;
 
-use clap::Arg;
+use clap::{App, AppSettings, Arg, SubCommand};
 use std::env;
 use std::fs;
 use std::io::prelude::*;
@@ -30,13 +30,21 @@ use crate::util::*;
 
 /// Returns Some is target was passed on the commandline, None otherwise.
 fn parse_args() -> Option<String> {
-    let args = app_from_crate!()
+    let args = App::new(crate_name!())
+        .version(crate_version!())
+        .about(crate_description!())
         .bin_name("cargo")
-        .arg(
-            Arg::with_name("target")
-                .long("target")
-                .empty_values(false)
-                .takes_value(true),
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .setting(AppSettings::GlobalVersion)
+        .subcommand(
+            SubCommand::with_name("sysroot")
+                .about(crate_description!())
+                .arg(
+                    Arg::with_name("target")
+                        .long("target")
+                        .empty_values(false)
+                        .takes_value(true),
+                ),
         ).get_matches();
     args.value_of("target").map(|s| s.to_string())
 }
@@ -170,9 +178,9 @@ fn generate_cargo_config(cfg: &BuildConfig) {
 }
 
 fn main() {
-    println!("Checking libcore and libcompiler_builtins");
     // TODO: Eat output if up to date.
     let cfg = BuildConfig::new();
+    println!("Checking libcore and libcompiler_builtins");
     generate_cargo_config(&cfg);
 
     build("libcore", None, &cfg);
