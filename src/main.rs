@@ -11,8 +11,11 @@
 extern crate toml;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate clap;
 extern crate fs_extra;
 
+use clap::{App, Arg, SubCommand};
 use std::env;
 use std::fs;
 use std::io::prelude::*;
@@ -24,6 +27,18 @@ mod config;
 mod util;
 use crate::config::*;
 use crate::util::*;
+
+/// Returns Some is target was passed on the commandline, None otherwise.
+fn parse_args() -> Option<String> {
+    let args = app_from_crate!()
+        .arg(
+            Arg::with_name("target") //
+                .long("target")
+                .empty_values(false)
+                .takes_value(true),
+        ).get_matches();
+    args.value_of("target").map(|s| s.to_string())
+}
 
 /// Read the target specification to use.
 /// This is located in Cargo.toml.
@@ -59,7 +74,10 @@ struct BuildConfig {
 impl BuildConfig {
     fn new() -> Self {
         let sysroot = get_local_sysroot_dir();
-        let target = get_target();
+        let target = match parse_args() {
+            Some(x) => PathBuf::from(x),
+            None => get_target(),
+        };
         Self {
             rust_src: get_rust_src_dir(),
             target_dir: get_target_dir(sysroot.clone()),
