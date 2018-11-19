@@ -16,17 +16,18 @@ extern crate clap;
 extern crate fs_extra;
 
 use clap::{App, AppSettings, Arg, SubCommand};
-use std::env;
-use std::fs;
-use std::io::prelude::*;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::str;
+use std::{
+    env,
+    fs,
+    io::prelude::*,
+    path::{Path, PathBuf},
+    process::Command,
+    str,
+};
 
 mod config;
 mod util;
-use crate::config::*;
-use crate::util::*;
+use crate::{config::*, util::*};
 
 /// Returns Some is target was passed on the commandline, None otherwise.
 fn parse_args() -> Option<String> {
@@ -45,7 +46,8 @@ fn parse_args() -> Option<String> {
                         .empty_values(false)
                         .takes_value(true),
                 ),
-        ).get_matches();
+        )
+        .get_matches();
     args.subcommand_matches("sysroot")
         .and_then(|x| x.value_of("target").map(|s| s.to_string()))
 }
