@@ -6,6 +6,8 @@
 A (dumb) tool to compile libcore and friends for no_std crates.
 
 This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool you call once.
+This has the nice benefit of actually working with standard tools like RLS, clippy,
+or even the simple `cargo check`.
 
 ## Prerequisite
 
@@ -78,7 +80,7 @@ libcompilter_builtins is built with the `mem` feature, which provides `memcpy` a
 ## FAQ
 
 * Q: Why are all versions before 0.4.1 yanked?
-* A: They didn't work correctly or at all because I didnt test properly. Oops.
+* A: They didn't work correctly due to bugs or changes in the standard distribution.
 
 ## License
 
