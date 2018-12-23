@@ -82,6 +82,9 @@ libcompilter_builtins is built with the `mem` feature, which provides `memcpy` a
 * Q: Why are all versions before 0.4.1 yanked?
 * A: They didn't work correctly due to bugs or changes in the standard distribution.
 
+* Q: Why did you write this over just using `cargo-xbuild`
+* A: It was easier and simpler than getting `cargo-xbuild` to work reliably or with any other standard tools.
+
 ## License
 
 Licensed under either of
