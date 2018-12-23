@@ -20,6 +20,7 @@ categories = [
     "development-tools",
     "development-tools::cargo-plugins",
 ]
+edition = "2018"
 
 [dependencies]
 toml = "0.4.10"

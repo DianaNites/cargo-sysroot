@@ -8,17 +8,9 @@
 //!
 //! Cargo will automatically rebuild the project and all dependencies
 //! if the files in the sysroot change.
-extern crate toml;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate clap;
-extern crate fs_extra;
-
-use clap::{App, AppSettings, Arg, SubCommand};
+use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
 use std::{
-    env,
-    fs,
+    env, fs,
     io::prelude::*,
     path::{Path, PathBuf},
     process::Command,
