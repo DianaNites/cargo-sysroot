@@ -22,9 +22,9 @@ categories = [
 ]
 
 [dependencies]
-toml = "0.4.8"
-serde_derive = "1.0.80"
-serde = "1.0.80"
+toml = "0.4.10"
+serde_derive = "1.0.82"
+serde = "1.0.82"
 fs_extra = "1.1.0"
 clap = "2.32.0"
 
