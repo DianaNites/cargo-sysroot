@@ -10,7 +10,8 @@
 //! if the files in the sysroot change.
 use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
 use std::{
-    env, fs,
+    env,
+    fs,
     io::prelude::*,
     path::{Path, PathBuf},
     process::Command,
@@ -92,6 +93,33 @@ impl BuildConfig {
     }
 }
 
+fn generate_cargo_config(cfg: &BuildConfig) {
+    let path = PathBuf::from(".cargo/config");
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    if path.exists() {
+        // TODO: Be smarter, update existing. Warn?
+        return;
+    }
+
+    let config = CargoBuild {
+        build: Build {
+            target: cfg.target.canonicalize().unwrap(),
+            rustflags: vec![
+                "--sysroot".to_owned(),
+                format!("{}", cfg.local_sysroot.to_str().unwrap()),
+            ],
+        },
+    };
+    let toml = toml::to_string(&config).unwrap();
+
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .unwrap();
+    f.write_all(toml.as_bytes()).unwrap();
+}
+
 /// Runs cargo build.
 /// The package located at rust_src/`name`/Cargo.toml will be built.
 fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
@@ -144,33 +172,6 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
         x
     };
     let _ = fs::copy(rlib, out).unwrap();
-}
-
-fn generate_cargo_config(cfg: &BuildConfig) {
-    let path = PathBuf::from(".cargo/config");
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    if path.exists() {
-        // TODO: Be smarter, update existing. Warn?
-        return;
-    }
-
-    let config = CargoBuild {
-        build: Build {
-            target: cfg.target.canonicalize().unwrap(),
-            rustflags: vec![
-                "--sysroot".to_owned(),
-                format!("{}", cfg.local_sysroot.to_str().unwrap()),
-            ],
-        },
-    };
-    let toml = toml::to_string(&config).unwrap();
-
-    let mut f = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(path)
-        .unwrap();
-    f.write_all(toml.as_bytes()).unwrap();
 }
 
 fn main() {
