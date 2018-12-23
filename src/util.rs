@@ -56,6 +56,7 @@ pub fn get_output_dir<T: AsRef<Path>>(mut base: PathBuf, target: T) -> PathBuf {
 }
 
 /// Host tools such as rust-lld need to be in the sysroot to link correctly.
+/// Copies entire host target, so stuff like tests work.
 pub fn copy_host_tools(mut local_sysroot: PathBuf) {
     let mut root = get_rustc_sysroot();
     let host = root
@@ -74,7 +75,6 @@ pub fn copy_host_tools(mut local_sysroot: PathBuf) {
         root.push("lib");
         root.push("rustlib");
         root.push(&host);
-        root.push("bin");
         root
     };
     let srcm = fs::metadata(&src).unwrap();
@@ -91,5 +91,5 @@ pub fn copy_host_tools(mut local_sysroot: PathBuf) {
     fs::create_dir_all(&local_sysroot).unwrap();
     let mut options = CopyOptions::new();
     options.overwrite = true;
-    copy(src, local_sysroot, &options).unwrap();
+    copy(src, local_sysroot.parent().unwrap(), &options).unwrap();
 }
