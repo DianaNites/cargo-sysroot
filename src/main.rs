@@ -129,12 +129,6 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
         x.push("Cargo.toml");
         x
     };
-    let features: Vec<_> = {
-        match features {
-            Some(fs) => fs.into_iter().collect(),
-            None => Default::default(),
-        }
-    };
     let mut cmd = Command::new(env::var_os("CARGO").unwrap());
     cmd.arg("rustc") //
         .arg("--release")
@@ -146,11 +140,11 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
         .arg(lib)
         .arg("-Z")
         .arg("unstable-options");
-    if !features.is_empty() {
+    if let Some(v) = features {
         cmd.arg("--features");
-        let mut s = String::new();
-        features.into_iter().for_each(|x| s.push_str(x));
-        cmd.arg(s);
+        for s in v {
+            cmd.arg(s);
+        }
     }
     cmd.arg("--") // Pass to rusc directly.
         .arg("-Z")
