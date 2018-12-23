@@ -26,7 +26,7 @@ pub struct CargoSysroot {
 //
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CargoBuild {
+pub struct CargoConfig {
     pub build: Build,
 }
 

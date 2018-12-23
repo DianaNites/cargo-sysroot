@@ -101,7 +101,7 @@ fn generate_cargo_config(cfg: &BuildConfig) {
         return;
     }
 
-    let config = CargoBuild {
+    let config = CargoConfig {
         build: Build {
             target: cfg.target.canonicalize().unwrap(),
             rustflags: vec![
