@@ -194,6 +194,25 @@ fn build_liballoc(cfg: &BuildConfig) {
         .arg("no-landing-pads")
         .status()
         .expect("Build failed.");
+    //
+    for entry in fs::read_dir(
+        cfg.target_dir
+            .join(&cfg.target.file_stem().unwrap())
+            .join("release")
+            .join("deps"),
+    )
+    .expect("Failure to read directory")
+    {
+        let entry = entry.expect("Failure to read entry");
+        let name = entry
+            .file_name()
+            .into_string()
+            .expect("Invalid Unicode in path");
+        if name.starts_with("lib") {
+            let out = cfg.output_dir.join(name);
+            fs::copy(entry.path(), out).expect("Copying failed");
+        }
+    }
 }
 
 fn main() {
