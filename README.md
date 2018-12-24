@@ -9,6 +9,14 @@ This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool 
 This has the nice benefit of actually working with standard tools like RLS, clippy,
 or even the simple `cargo check`.
 
+## New in 0.5.0
+
+Support for the new sysroot build process, and more reliable overall.
+
+Liballoc!
+
+I'm no longer mysterious!
+
 ## Prerequisite
 
 * A nightly compiler.
@@ -45,11 +53,13 @@ rustflags = [
 ]
 ```
 
-The sysroot will be located at `target/sysroot` and the libcore target directory at `target/sysroot/target`.
-Multiple target specifictions are supported and will not conflict, and due to the way rust uses the sysroot your generated `.cargo/config`
-should not need to be changed, as the base path it uses is not target specific.
+The sysroot will be located at `target/sysroot` and the target directory for building it at `target/sysroot/target`.
+
+Due to how rust sysroots work, you can use multiple different target specifications at a time without rebuilding.
+Switching between them will require manually changing `.cargo/config`, however.
 
 Note that this tool is currently quite stupid, so it won't attempt to do anything if that file already exists.
+In this case you will have to edit it manually.
 
 This will allow Cargo to properly build your project with the normal commands such as `cargo build`.
 You may wish to modify this file to make use of the `target.$triple.runner` key. See the [Cargo Documentation](https://doc.rust-lang.org/cargo/reference/config.html#configuration-keys) for details.
@@ -64,22 +74,17 @@ If you have more complicated needs than can be satisfied by `target.$triple.runn
 
 ## Details
 
-libcore and friends are compiled with the `--release` switch.
-libcompilter_builtins is built with the `mem` feature, which provides `memcpy` and friends.
+The sysroot crates are compiled with the `--release` switch.
+compilter_builtins is built with the `mem` and `core` features, which provides `memcpy` and related.
 
 ## TODO
 
 * Allow specifying a custom `rust-src`.
 * Allow disabling the `mem` feature.
-* Liballoc.
-
-## Limitations
-
-* Liballoc is currently unsupported.
 
 ## FAQ
 
-* Q: Why are all versions before 0.4.1 yanked?
+* Q: Why are all versions before 0.5.0 yanked?
 * A: They didn't work correctly due to bugs or changes in the standard distribution.
 
 * Q: Why did you write this over just using `cargo-xbuild`
