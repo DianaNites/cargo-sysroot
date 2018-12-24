@@ -1,10 +1,13 @@
 //! Handle configuration data
 use serde_derive::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 #[derive(Deserialize, Debug, Serialize)]
 pub struct CargoToml {
     pub package: Package,
+    #[serde(default)]
+    pub dependencies: BTreeMap<String, Dependency>,
+    pub patch: BTreeMap<String, Patch>,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -21,6 +24,20 @@ pub struct Metadata {
 #[derive(Deserialize, Debug, Serialize)]
 pub struct CargoSysroot {
     pub target: PathBuf,
+}
+
+#[derive(Deserialize, Debug, Serialize, Default)]
+#[serde(default)]
+pub struct Dependency {
+    path: PathBuf,
+    version: String,
+    features: Vec<String>,
+}
+
+#[derive(Deserialize, Debug, Serialize, Default)]
+#[serde(default)]
+pub struct Patch {
+    path: PathBuf,
 }
 
 //
