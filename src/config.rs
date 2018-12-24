@@ -1,17 +1,15 @@
 //! Handle configuration data
 use serde_derive::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::PathBuf};
+// TODO: Factor this shit out into a seperate crate.
 
 #[derive(Deserialize, Debug, Serialize, Default)]
 pub struct CargoToml {
     pub package: Option<Package>,
-    #[serde(default)]
     #[serde(skip_deserializing)]
     pub dependencies: BTreeMap<String, Dependency>,
-    #[serde(default)]
     #[serde(skip_deserializing)]
     pub patch: BTreeMap<String, BTreeMap<String, Patch>>,
-    #[serde(default)]
     #[serde(skip_deserializing)]
     pub lib: Lib,
 }
@@ -24,10 +22,8 @@ pub struct Lib {
 
 #[derive(Deserialize, Debug, Serialize)]
 pub struct Package {
-    #[serde(default)]
     #[serde(skip_deserializing)]
     pub name: String,
-    #[serde(default)]
     #[serde(skip_deserializing)]
     pub version: String,
     #[serde(skip_serializing)]

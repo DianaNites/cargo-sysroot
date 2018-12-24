@@ -8,7 +8,6 @@
 //!
 //! Cargo will automatically rebuild the project and all dependencies
 //! if the files in the sysroot change.
-#![allow(dead_code)]
 use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
 use std::{
     collections::BTreeMap,
@@ -17,7 +16,6 @@ use std::{
     io::prelude::*,
     path::{Path, PathBuf},
     process::Command,
-    str,
 };
 
 mod config;
@@ -101,6 +99,7 @@ impl BuildConfig {
     }
 }
 
+#[allow(dead_code)]
 fn generate_cargo_config(cfg: &BuildConfig) {
     let path = PathBuf::from(".cargo/config");
     fs::create_dir_all(path.parent().unwrap()).unwrap();
@@ -126,54 +125,6 @@ fn generate_cargo_config(cfg: &BuildConfig) {
         .open(path)
         .unwrap();
     f.write_all(toml.as_bytes()).unwrap();
-}
-
-/// Runs cargo build.
-/// The package located at rust_src/`name`/Cargo.toml will be built.
-fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
-    let lib = {
-        let mut x = cfg.rust_src.clone();
-        x.push(name);
-        x.push("Cargo.toml");
-        x
-    };
-    let mut cmd = Command::new(env::var_os("CARGO").unwrap());
-    cmd.arg("rustc") //
-        .arg("--release")
-        .arg("--target")
-        .arg(&cfg.target)
-        .arg("--target-dir")
-        .arg(&cfg.target_dir)
-        .arg("--manifest-path")
-        .arg(lib)
-        .arg("-Z")
-        .arg("unstable-options");
-    if let Some(v) = features {
-        cmd.arg("--features");
-        for s in v {
-            cmd.arg(s);
-        }
-    }
-    cmd.arg("--") // Pass to rusc directly.
-        .arg("-Z")
-        .arg("no-landing-pads");
-    let _ = cmd.status().unwrap();
-    //
-    let rlib = {
-        let mut x = cfg.target_dir.clone();
-        x.push(cfg.target.file_stem().unwrap());
-        x.push("release");
-        x.push(name);
-        x.set_extension("rlib");
-        x
-    };
-    let out = {
-        let mut x = cfg.output_dir.clone();
-        x.push(name);
-        x.set_extension("rlib");
-        x
-    };
-    let _ = fs::copy(rlib, out).unwrap();
 }
 
 fn build_liballoc(cfg: &BuildConfig) {
@@ -243,8 +194,6 @@ fn main() {
     println!("Checking libcore and libcompiler_builtins");
     // generate_cargo_config(&cfg);
 
-    // build("libcore", None, &cfg);
-    // build("libcompiler_builtins", Some(&["mem"]), &cfg);
     build_liballoc(&cfg);
 
     // copy_host_tools(cfg.local_sysroot.clone());

@@ -57,6 +57,7 @@ pub fn get_output_dir<T: AsRef<Path>>(mut base: PathBuf, target: T) -> PathBuf {
 
 /// Host tools such as rust-lld need to be in the sysroot to link correctly.
 /// Copies entire host target, so stuff like tests work.
+#[allow(dead_code)]
 pub fn copy_host_tools(mut local_sysroot: PathBuf) {
     let mut root = get_rustc_sysroot();
     let host = root
