@@ -28,6 +28,7 @@ serde_derive = "1.0.82"
 serde = "1.0.82"
 fs_extra = "1.1.0"
 clap = "2.32.0"
+cargo-toml2 = "1.2.0"
 
 [badges]
 maintenance = { status = "as-is" }
