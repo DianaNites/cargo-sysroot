@@ -8,8 +8,10 @@
 //!
 //! Cargo will automatically rebuild the project and all dependencies
 //! if the files in the sysroot change.
+#![allow(dead_code)]
 use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
 use std::{
+    collections::BTreeMap,
     env,
     fs,
     io::prelude::*,
@@ -64,7 +66,13 @@ fn get_target() -> PathBuf {
         s
     };
     let target: CargoToml = toml::from_str(&toml).unwrap();
-    target.package.metadata.cargo_sysroot.target
+    target
+        .package
+        .expect("Missing cargo-sysroot metadata")
+        .metadata
+        .expect("Missing cargo-sysroot metadata")
+        .cargo_sysroot
+        .target
 }
 
 /// Stuff the build command needs.
@@ -168,14 +176,76 @@ fn build(name: &str, features: Option<&[&str]>, cfg: &BuildConfig) {
     let _ = fs::copy(rlib, out).unwrap();
 }
 
+fn build_liballoc(cfg: &BuildConfig) {
+    let core = cfg.rust_src.join("libcore");
+    let mut deps: BTreeMap<String, Dependency> = BTreeMap::new();
+    let mut patch: BTreeMap<String, BTreeMap<String, Patch>> = BTreeMap::new();
+    let coredep = Dependency {
+        path: Some(core),
+        ..Default::default()
+    };
+    let builtinsdep = Dependency {
+        version: Some("0.1.0".into()),
+        features: Some(vec!["core".into(), "mem".into()]),
+        ..Default::default()
+    };
+    deps.insert("core".to_string(), coredep);
+    deps.insert("compiler_builtins".to_string(), builtinsdep);
+    patch.insert(
+        "crates-io".into(),
+        [(
+            "rustc-std-workspace-core".into(),
+            Patch {
+                path: cfg.rust_src.join("tools").join("rustc-std-workspace-core"),
+            },
+        )]
+        .iter()
+        .cloned()
+        .collect(),
+    );
+    let t = CargoToml {
+        dependencies: deps,
+        patch: patch,
+        package: Some(Package {
+            name: "alloc_builder".into(),
+            version: "0.0.0".into(),
+            metadata: None,
+        }),
+        lib: Lib {
+            name: "alloc".into(),
+            path: cfg.rust_src.join("liballoc").join("lib.rs"),
+        },
+    };
+    let t = toml::to_string(&t).expect("Failed creating temp Cargo.toml");
+    let path = cfg.target_dir.join("Cargo.toml");
+    std::fs::create_dir_all(path.parent().expect("Impossible")).expect("Failed to create temp dir");
+    fs::write(&path, t).expect("Failed writing temp Cargo.toml");
+    //
+    Command::new(env::var_os("CARGO").unwrap())
+        .arg("rustc")
+        .arg("--release")
+        .arg("--target")
+        .arg(&cfg.target)
+        .arg("--target-dir")
+        .arg(&cfg.target_dir)
+        .arg("--manifest-path")
+        .arg(path)
+        .arg("--") // Pass to rusc directly.
+        .arg("-Z")
+        .arg("no-landing-pads")
+        .status()
+        .expect("Build failed.");
+}
+
 fn main() {
     // TODO: Eat output if up to date.
     let cfg = BuildConfig::new();
     println!("Checking libcore and libcompiler_builtins");
-    generate_cargo_config(&cfg);
+    // generate_cargo_config(&cfg);
 
-    build("libcore", None, &cfg);
-    build("libcompiler_builtins", Some(&["mem"]), &cfg);
+    // build("libcore", None, &cfg);
+    // build("libcompiler_builtins", Some(&["mem"]), &cfg);
+    build_liballoc(&cfg);
 
-    copy_host_tools(cfg.local_sysroot.clone());
+    // copy_host_tools(cfg.local_sysroot.clone());
 }

@@ -2,17 +2,36 @@
 use serde_derive::{Deserialize, Serialize};
 use std::{collections::BTreeMap, path::PathBuf};
 
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Deserialize, Debug, Serialize, Default)]
 pub struct CargoToml {
-    pub package: Package,
+    pub package: Option<Package>,
     #[serde(default)]
+    #[serde(skip_deserializing)]
     pub dependencies: BTreeMap<String, Dependency>,
-    pub patch: BTreeMap<String, Patch>,
+    #[serde(default)]
+    #[serde(skip_deserializing)]
+    pub patch: BTreeMap<String, BTreeMap<String, Patch>>,
+    #[serde(default)]
+    #[serde(skip_deserializing)]
+    pub lib: Lib,
+}
+
+#[derive(Deserialize, Debug, Serialize, Default)]
+pub struct Lib {
+    pub name: String,
+    pub path: PathBuf,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
 pub struct Package {
-    pub metadata: Metadata,
+    #[serde(default)]
+    #[serde(skip_deserializing)]
+    pub name: String,
+    #[serde(default)]
+    #[serde(skip_deserializing)]
+    pub version: String,
+    #[serde(skip_serializing)]
+    pub metadata: Option<Metadata>,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -29,15 +48,15 @@ pub struct CargoSysroot {
 #[derive(Deserialize, Debug, Serialize, Default)]
 #[serde(default)]
 pub struct Dependency {
-    path: PathBuf,
-    version: String,
-    features: Vec<String>,
+    pub path: Option<PathBuf>,
+    pub version: Option<String>,
+    pub features: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug, Serialize, Default)]
+#[derive(Deserialize, Debug, Serialize, Default, Clone)]
 #[serde(default)]
 pub struct Patch {
-    path: PathBuf,
+    pub path: PathBuf,
 }
 
 //
