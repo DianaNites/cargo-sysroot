@@ -219,9 +219,9 @@ fn main() {
     // TODO: Eat output if up to date.
     let cfg = BuildConfig::new();
     println!("Checking libcore and libcompiler_builtins");
-    // generate_cargo_config(&cfg);
+    generate_cargo_config(&cfg);
 
     build_liballoc(&cfg);
 
-    // copy_host_tools(cfg.local_sysroot.clone());
+    copy_host_tools(cfg.local_sysroot.clone());
 }
