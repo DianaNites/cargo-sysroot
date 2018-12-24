@@ -8,19 +8,22 @@
 //!
 //! Cargo will automatically rebuild the project and all dependencies
 //! if the files in the sysroot change.
-use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
-use std::{
-    collections::BTreeMap,
-    env,
-    fs,
-    io::prelude::*,
-    path::{Path, PathBuf},
-    process::Command,
+use cargo_toml2::{
+    from_path,
+    Build,
+    CargoConfig,
+    CargoToml,
+    Dependency,
+    DependencyFull,
+    Package,
+    Patches,
+    TargetConfig,
 };
+use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
+use std::{collections::BTreeMap, env, fs, io::prelude::*, path::PathBuf, process::Command};
 
-mod config;
 mod util;
-use crate::{config::*, util::*};
+use crate::util::*;
 
 /// Returns Some is target was passed on the commandline, None otherwise.
 fn parse_args() -> Option<String> {
@@ -54,23 +57,16 @@ fn parse_args() -> Option<String> {
 /// target = "path"
 /// ```
 fn get_target() -> PathBuf {
-    let cargo = Path::new("Cargo.toml");
-    let toml = {
-        let mut s = String::new();
-        fs::File::open(cargo)
-            .unwrap()
-            .read_to_string(&mut s)
-            .unwrap();
-        s
-    };
-    let target: CargoToml = toml::from_str(&toml).unwrap();
+    let target: CargoToml = from_path("Cargo.toml").expect("Failed to read Cargo.toml");
     target
         .package
-        .expect("Missing cargo-sysroot metadata")
         .metadata
         .expect("Missing cargo-sysroot metadata")
-        .cargo_sysroot
-        .target
+        .get("cargo-sysroot")
+        .expect("Missing cargo-sysroot metadata")["target"]
+        .as_str()
+        .expect("Invalid cargo-sysroot metadata")
+        .into()
 }
 
 /// Stuff the build command needs.
@@ -109,13 +105,15 @@ fn generate_cargo_config(cfg: &BuildConfig) {
     }
 
     let config = CargoConfig {
-        build: Build {
-            target: cfg.target.canonicalize().unwrap(),
-            rustflags: vec![
+        build: Some(Build {
+            target: Some(cfg.target.canonicalize().unwrap().to_str().unwrap().into()),
+            rustflags: Some(vec![
                 "--sysroot".to_owned(),
                 format!("{}", cfg.local_sysroot.to_str().unwrap()),
-            ],
-        },
+            ]),
+            ..Default::default()
+        }),
+        ..Default::default()
     };
     let toml = toml::to_string(&config).unwrap();
 
@@ -128,45 +126,55 @@ fn generate_cargo_config(cfg: &BuildConfig) {
 }
 
 fn build_liballoc(cfg: &BuildConfig) {
-    let core = cfg.rust_src.join("libcore");
-    let mut deps: BTreeMap<String, Dependency> = BTreeMap::new();
-    let mut patch: BTreeMap<String, BTreeMap<String, Patch>> = BTreeMap::new();
-    let coredep = Dependency {
-        path: Some(core),
-        ..Default::default()
-    };
-    let builtinsdep = Dependency {
-        version: Some("0.1.0".into()),
-        features: Some(vec!["core".into(), "mem".into()]),
-        ..Default::default()
-    };
-    deps.insert("core".to_string(), coredep);
-    deps.insert("compiler_builtins".to_string(), builtinsdep);
-    patch.insert(
-        "crates-io".into(),
-        [(
-            "rustc-std-workspace-core".into(),
-            Patch {
-                path: cfg.rust_src.join("tools").join("rustc-std-workspace-core"),
-            },
-        )]
-        .iter()
-        .cloned()
-        .collect(),
-    );
-    let t = CargoToml {
-        dependencies: deps,
-        patch: patch,
-        package: Some(Package {
+    let mut t = CargoToml {
+        package: Package {
             name: "alloc_builder".into(),
             version: "0.0.0".into(),
-            metadata: None,
-        }),
-        lib: Lib {
-            name: "alloc".into(),
-            path: cfg.rust_src.join("liballoc").join("lib.rs"),
+            ..Default::default()
         },
+        lib: Some(TargetConfig {
+            //.
+            name: Some("alloc".into()),
+            path: Some(cfg.rust_src.join("liballoc").join("lib.rs")),
+            ..Default::default()
+        }),
+        dependencies: Some(BTreeMap::new()),
+        patch: Some(Patches {
+            sources: BTreeMap::new(),
+        }),
+        ..Default::default()
     };
+    t.dependencies.as_mut().unwrap().insert(
+        "core".into(),
+        Dependency::Full(DependencyFull {
+            path: Some(cfg.rust_src.join("libcore")),
+            ..Default::default()
+        }),
+    );
+    t.dependencies.as_mut().unwrap().insert(
+        "compiler_builtins".into(),
+        Dependency::Full(DependencyFull {
+            version: Some("0.1.0".into()),
+            features: Some(vec!["core".into(), "mem".into()]),
+            ..Default::default()
+        }),
+    );
+    t.patch
+        .as_mut()
+        .unwrap()
+        .sources
+        .insert("crates-io".into(), {
+            let mut x = BTreeMap::new();
+            x.insert(
+                "rustc-std-workspace-core".to_string(),
+                Dependency::Full(DependencyFull {
+                    path: Some(cfg.rust_src.join("tools").join("rustc-std-workspace-core")),
+                    ..Default::default()
+                }),
+            );
+            x
+        });
+    //
     let t = toml::to_string(&t).expect("Failed creating temp Cargo.toml");
     let path = cfg.target_dir.join("Cargo.toml");
     std::fs::create_dir_all(path.parent().expect("Impossible")).expect("Failed to create temp dir");
