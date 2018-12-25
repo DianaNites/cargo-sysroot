@@ -72,10 +72,14 @@ Note that doing this will cause cargo to detect that libcore has changed and reb
 
 If you have more complicated needs than can be satisfied by `target.$triple.runner`, which doesn't yet support passing arguments, the author recommends using a tool such as [cargo-make](https://crates.io/crates/cargo-make).
 
+Use my other crate, [`cargo-image`](https://crates.io/crates/cargo-image) to build an image suitable for running in QEMU.
+
 ## Details
 
 The sysroot crates are compiled with the `--release` switch.
 compilter_builtins is built with the `mem` and `core` features, which provides `memcpy` and related.
+
+The sysroot crates will share any profile information your crate specifies. Eg if you enable debug for `release`, the sysroot crates will have that too. This matches `cargo-xbuild` behaviour and is required for the `bootloader` crate to function.
 
 ## TODO
 
