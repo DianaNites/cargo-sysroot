@@ -184,7 +184,7 @@ fn build_liballoc(cfg: &BuildConfig) {
     std::fs::create_dir_all(path.parent().expect("Impossible")).expect("Failed to create temp dir");
     fs::write(&path, t).expect("Failed writing temp Cargo.toml");
     //
-    Command::new(env::var_os("CARGO").unwrap())
+    let exit = Command::new(env::var_os("CARGO").unwrap())
         .arg("rustc")
         .arg("--release")
         .arg("--target")
@@ -198,6 +198,7 @@ fn build_liballoc(cfg: &BuildConfig) {
         .arg("no-landing-pads")
         .status()
         .expect("Build failed.");
+    assert!(exit.success(), "Build failed.");
     //
     for entry in fs::read_dir(
         cfg.target_dir
