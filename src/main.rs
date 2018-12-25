@@ -229,7 +229,7 @@ fn build_liballoc(cfg: &BuildConfig) {
 fn main() {
     // TODO: Eat output if up to date.
     let cfg = BuildConfig::new();
-    println!("Checking libcore and libcompiler_builtins");
+    println!("Building sysroot crates");
     if !cfg.no_config {
         generate_cargo_config(&cfg);
     }
