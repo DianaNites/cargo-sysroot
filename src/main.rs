@@ -195,7 +195,11 @@ fn build_liballoc(cfg: &BuildConfig) {
         .arg(path)
         .arg("--") // Pass to rusc directly.
         .arg("-Z")
+        // Should this be configurable? Would anyone want unwinding for the sysroot crates?
         .arg("no-landing-pads")
+        .arg("-Z")
+        // The rust build system only passes this for rustc, but xbuild passes this for liballoc. 🤷
+        .arg("force-unstable-if-unmarked")
         .status()
         .expect("Build failed.");
     assert!(exit.success(), "Build failed.");
