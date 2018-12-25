@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/cargo-sysroot.svg)](https://crates.io/crates/cargo-sysroot)
 ![maintenance-as-is](https://img.shields.io/badge/maintenance-as--is-yellow.svg)
 
-A (dumb) tool to compile libcore and friends for no_std crates.
+A (dumb) tool to compile the sysroot crates for your no_std application.
 
 This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool you call once.
 This has the nice benefit of actually working with standard tools like RLS, clippy,
