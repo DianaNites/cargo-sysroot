@@ -22,7 +22,7 @@ I'm no longer mysterious!
 * A nightly compiler.
 * The `rust-src` component must be installed for the active toolchain.
 * Your `Cargo.toml` file must contain `package.metadata.cargo-sysroot.target`, where target is a target specifiction json file.
-    * A rust supported target may also work, but this is untested.
+    * A built-in target may also work, but this is untested.
 * OR Pass `--target` on the commandline, ex `cargo sysroot --target path/to/target.json`
 
 ### Example `Cargo.toml`
@@ -42,7 +42,9 @@ target = "my_custom_target.json" # This is relative to Cargo.toml
 * Run `cargo install cargo-sysroot`.
 * Run `cargo sysroot` in the working directory of your project.
 
-This tool will generate a `.cargo/config` for you that looks something like this
+This tool will generate a `.cargo/config` for you that looks something like this.
+This can be disabled via the `--no-config` command-line option,
+but note that you will then have to tell cargo about your target and sysroot location some other way.
 
 ```toml
 [build]
