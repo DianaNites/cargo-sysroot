@@ -139,8 +139,9 @@ fn generate_cargo_config(cfg: &BuildConfig) {
 fn build_liballoc(cfg: &BuildConfig) {
     let mut t = CargoToml {
         package: Package {
-            name: "alloc_builder".into(),
+            name: "alloc".into(),
             version: "0.0.0".into(),
+            authors: vec!["The Rust Project Developers".into()],
             ..Default::default()
         },
         lib: Some(TargetConfig {
