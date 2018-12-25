@@ -26,7 +26,7 @@ mod util;
 use crate::util::*;
 
 /// Returns Some is target was passed on the commandline, None otherwise.
-fn parse_args() -> Option<String> {
+fn parse_args() -> (Option<String>, bool) {
     let args = App::new(crate_name!())
         .version(crate_version!())
         .about(crate_description!())
@@ -41,11 +41,19 @@ fn parse_args() -> Option<String> {
                         .long("target")
                         .empty_values(false)
                         .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("no_config")
+                        .help("Disable .cargo/config generation")
+                        .long("no-config"),
                 ),
         )
         .get_matches();
-    args.subcommand_matches("sysroot")
-        .and_then(|x| x.value_of("target").map(|s| s.to_string()))
+    let matches = args.subcommand_matches("sysroot").expect("Impossible");
+    (
+        matches.value_of("target").map(|s| s.to_string()),
+        matches.is_present("no_config"),
+    )
 }
 
 /// Read the target specification to use.
@@ -76,12 +84,14 @@ struct BuildConfig {
     target: PathBuf,
     target_dir: PathBuf,
     output_dir: PathBuf,
+    no_config: bool,
 }
 
 impl BuildConfig {
     fn new() -> Self {
         let sysroot = get_local_sysroot_dir();
-        let target = match parse_args() {
+        let (target, no_config) = parse_args();
+        let target = match target {
             Some(x) => PathBuf::from(x),
             None => get_target(),
         };
@@ -91,6 +101,7 @@ impl BuildConfig {
             output_dir: get_output_dir(sysroot.clone(), &target),
             local_sysroot: sysroot,
             target: target,
+            no_config: no_config,
         }
     }
 }
@@ -219,7 +230,9 @@ fn main() {
     // TODO: Eat output if up to date.
     let cfg = BuildConfig::new();
     println!("Checking libcore and libcompiler_builtins");
-    generate_cargo_config(&cfg);
+    if !cfg.no_config {
+        generate_cargo_config(&cfg);
+    }
 
     build_liballoc(&cfg);
 
