@@ -51,7 +51,12 @@ pub fn get_output_dir<T: AsRef<Path>>(mut base: PathBuf, target: T) -> PathBuf {
     base.push("rustlib");
     base.push(target.as_ref().file_stem().unwrap());
     base.push("lib");
-    fs::create_dir_all(&base).unwrap();
+    match fs::remove_dir_all(&base) {
+        Ok(_) => (),
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => (),
+        _ => panic!("Couldn't clear sysroot"),
+    };
+    fs::create_dir_all(&base).expect("Couldn't create sysroot");
     base
 }
 
