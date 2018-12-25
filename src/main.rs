@@ -17,6 +17,7 @@ use cargo_toml2::{
     DependencyFull,
     Package,
     Patches,
+    Profile,
     TargetConfig,
 };
 use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
@@ -56,27 +57,6 @@ fn parse_args() -> (Option<String>, bool) {
     )
 }
 
-/// Read the target specification to use.
-/// This is located in Cargo.toml.
-/// target can be a relative or absolute path.
-/// Relative paths will be relative to the directory containing Cargo.toml.
-/// ```toml
-/// [package.metadata.cargo-sysroot]
-/// target = "path"
-/// ```
-fn get_target() -> PathBuf {
-    let target: CargoToml = from_path("Cargo.toml").expect("Failed to read Cargo.toml");
-    target
-        .package
-        .metadata
-        .expect("Missing cargo-sysroot metadata")
-        .get("cargo-sysroot")
-        .expect("Missing cargo-sysroot metadata")["target"]
-        .as_str()
-        .expect("Invalid cargo-sysroot metadata")
-        .into()
-}
-
 /// Stuff the build command needs.
 struct BuildConfig {
     rust_src: PathBuf,
@@ -85,15 +65,25 @@ struct BuildConfig {
     target_dir: PathBuf,
     output_dir: PathBuf,
     no_config: bool,
+    profile: Option<Profile>,
 }
 
 impl BuildConfig {
     fn new() -> Self {
         let sysroot = get_local_sysroot_dir();
+        let toml: CargoToml = from_path("Cargo.toml").expect("Failed to read Cargo.toml");
         let (target, no_config) = parse_args();
         let target = match target {
             Some(x) => PathBuf::from(x),
-            None => get_target(),
+            None => toml
+                .package
+                .metadata
+                .expect("Missing cargo-sysroot metadata")
+                .get("cargo-sysroot")
+                .expect("Missing cargo-sysroot metadata")["target"]
+                .as_str()
+                .expect("Invalid cargo-sysroot metadata")
+                .into(),
         };
         Self {
             rust_src: get_rust_src_dir(),
@@ -102,6 +92,7 @@ impl BuildConfig {
             local_sysroot: sysroot,
             target: target,
             no_config: no_config,
+            profile: toml.profile,
         }
     }
 }
@@ -154,6 +145,7 @@ fn build_liballoc(cfg: &BuildConfig) {
         patch: Some(Patches {
             sources: BTreeMap::new(),
         }),
+        profile: cfg.profile.clone(),
         ..Default::default()
     };
     t.dependencies.as_mut().unwrap().insert(
