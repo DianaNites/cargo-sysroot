@@ -7,23 +7,15 @@ A (dumb) tool to compile the sysroot crates for your no_std application.
 
 This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool you call once.
 This has the nice benefit of actually working with standard tools like RLS, clippy,
-or even the simple `cargo check`.
-
-## New in 0.5.0
-
-Support for the new sysroot build process, and more reliable overall.
-
-Liballoc!
-
-I'm no longer mysterious!
+or even the simple `cargo check`. It accomplishes this by generating a `.cargo/config` for you.
 
 ## Prerequisite
 
 * A nightly compiler.
 * The `rust-src` component must be installed for the active toolchain.
-* Your `Cargo.toml` file must contain `package.metadata.cargo-sysroot.target`, where target is a target specifiction json file.
-    * A built-in target may also work, but this is untested.
-* OR Pass `--target` on the commandline, ex `cargo sysroot --target path/to/target.json`
+* Your `Cargo.toml` file must contain `package.metadata.cargo-sysroot.target`, where target is a target specification json file.
+  * A built-in target may also work, but this is untested.
+* OR Pass `--target` on the command line, ex `cargo sysroot --target path/to/target.json`
 
 ### Example `Cargo.toml`
 
@@ -57,8 +49,7 @@ rustflags = [
 
 The sysroot will be located at `target/sysroot` and the target directory for building it at `target/sysroot/target`.
 
-Due to how rust sysroots work, you can use multiple different target specifications at a time without rebuilding.
-Switching between them will require manually changing `.cargo/config`, however.
+Due to how the rust sysroot works, you can use multiple different target specifications at a time without rebuilding, by simply passing a different `--target` to cargo.
 
 Note that this tool is currently quite stupid, so it won't attempt to do anything if that file already exists.
 In this case you will have to edit it manually.
@@ -70,7 +61,7 @@ Note that the author experienced problems with the `$triple` variant not working
 If you update your Rust nightly version you will need to run `cargo-sysroot` again.
 Note that doing this will cause cargo to detect that libcore has changed and rebuild your entire project.
 
-## Recomendations
+## Recommendations
 
 If you have more complicated needs than can be satisfied by `target.$triple.runner`, which doesn't yet support passing arguments, the author recommends using a tool such as [cargo-make](https://crates.io/crates/cargo-make).
 
@@ -79,9 +70,9 @@ Use my other crate, [`cargo-image`](https://crates.io/crates/cargo-image) to bui
 ## Details
 
 The sysroot crates are compiled with the `--release` switch.
-compilter_builtins is built with the `mem` and `core` features, which provides `memcpy` and related.
+compiler_builtins is built with the `mem` and `core` features, which provides `memcpy` and related.
 
-The sysroot crates will share any profile information your crate specifies. Eg if you enable debug for `release`, the sysroot crates will have that too. This matches `cargo-xbuild` behaviour and is required for the `bootloader` crate to function.
+The sysroot crates will share any profile information your crate specifies. Eg if you enable debug for `release`, the sysroot crates will have that too. This matches `cargo-xbuild` behavior and is required for the `bootloader` crate to function.
 
 ## TODO
 
