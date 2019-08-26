@@ -23,12 +23,12 @@ categories = [
 edition = "2018"
 
 [dependencies]
-toml = "0.4.10"
-serde_derive = "1.0.82"
-serde = "1.0.82"
+toml = "0.5.3"
+serde_derive = "1.0.99"
+serde = "1.0.99"
 fs_extra = "1.1.0"
-clap = "2.32.0"
-cargo-toml2 = "1.3.1"
+clap = "2.33.0"
+cargo-toml2 = "1.3.2"
 
 [badges]
 maintenance = { status = "as-is" }
