@@ -26,7 +26,7 @@ use std::{collections::BTreeMap, env, fs, io::prelude::*, path::PathBuf, process
 mod util;
 use crate::util::*;
 
-/// Returns Some is target was passed on the commandline, None otherwise.
+/// Returns Some is target was passed on the command line, None otherwise.
 fn parse_args() -> (Option<String>, bool) {
     let args = App::new(crate_name!())
         .version(crate_version!())
