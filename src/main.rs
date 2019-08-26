@@ -133,6 +133,7 @@ fn build_liballoc(cfg: &BuildConfig) {
             name: "alloc".into(),
             version: "0.0.0".into(),
             authors: vec!["The Rust Project Developers".into()],
+            edition: Some("2018".into()),
             ..Default::default()
         },
         lib: Some(TargetConfig {
