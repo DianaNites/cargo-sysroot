@@ -44,23 +44,33 @@ struct Sysroot {
 
     /// Target to build for.
     ///
-    /// Uses the value from `package.metadata.cargo-sysroot.target` as a default.
+    /// Uses the value from `package.metadata.cargo-sysroot.target` as a
+    /// default.
     #[structopt(long)]
     target: Option<PathBuf>,
 
     /// Disable .cargo/config generation
     #[structopt(long)]
     no_config: bool,
+
+    /// Path to the rust sources.
+    ///
+    /// If not specified, uses the `rust-src` component from rustup.
+    #[structopt(long)]
+    rust_src_dir: Option<PathBuf>,
+
+    /// The [profile] section from `Cargo.toml`.
+    /// Some use-cases require the sysroot crates be built with this matching.
+    #[structopt(skip)]
+    cargo_profile: Option<Profile>,
 }
 
 /// Stuff the build command needs.
 struct BuildConfig {
-    rust_src: PathBuf,
     local_sysroot: PathBuf,
     target: PathBuf,
     target_dir: PathBuf,
     output_dir: PathBuf,
-    profile: Option<Profile>,
 }
 
 impl BuildConfig {
@@ -83,12 +93,10 @@ impl BuildConfig {
         });
 
         Self {
-            rust_src: get_rust_src_dir(),
             target_dir: get_target_dir(&sysroot),
             output_dir: get_output_dir(&sysroot, &target),
             local_sysroot: sysroot,
             target,
-            profile: toml.profile,
         }
     }
 }
@@ -139,8 +147,10 @@ fn generate_cargo_config(args: &Sysroot) {
 /// The `Cargo.toml` for building the `alloc` crate.
 ///
 /// Returns the full path to the manifest
-fn generate_liballoc_cargo_toml(cfg: &BuildConfig) -> PathBuf {
-    let mut t = CargoToml {
+fn generate_liballoc_cargo_toml(args: &Sysroot) -> PathBuf {
+    let rust_src = args.rust_src_dir.as_ref().expect("BUG: Missing rust-src");
+
+    let mut toml = CargoToml {
         package: Package {
             name: "alloc".into(),
             version: "0.0.0".into(),
@@ -150,24 +160,24 @@ fn generate_liballoc_cargo_toml(cfg: &BuildConfig) -> PathBuf {
         },
         lib: Some(TargetConfig {
             name: Some("alloc".into()),
-            path: Some(cfg.rust_src.join("liballoc").join("lib.rs")),
+            path: Some(rust_src.join("liballoc").join("lib.rs")),
             ..Default::default()
         }),
         dependencies: Some(BTreeMap::new()),
         patch: Some(Patches {
             sources: BTreeMap::new(),
         }),
-        profile: cfg.profile.clone(),
+        profile: args.cargo_profile.clone(),
         ..Default::default()
     };
-    t.dependencies.as_mut().unwrap().insert(
+    toml.dependencies.as_mut().unwrap().insert(
         "core".into(),
         Dependency::Full(DependencyFull {
-            path: Some(cfg.rust_src.join("libcore")),
+            path: Some(rust_src.join("libcore")),
             ..Default::default()
         }),
     );
-    t.dependencies.as_mut().unwrap().insert(
+    toml.dependencies.as_mut().unwrap().insert(
         "compiler_builtins".into(),
         Dependency::Full(DependencyFull {
             version: Some("0.1.0".into()),
@@ -175,7 +185,7 @@ fn generate_liballoc_cargo_toml(cfg: &BuildConfig) -> PathBuf {
             ..Default::default()
         }),
     );
-    t.patch
+    toml.patch
         .as_mut()
         .unwrap()
         .sources
@@ -184,22 +194,23 @@ fn generate_liballoc_cargo_toml(cfg: &BuildConfig) -> PathBuf {
             x.insert(
                 "rustc-std-workspace-core".to_string(),
                 Dependency::Full(DependencyFull {
-                    path: Some(cfg.rust_src.join("tools").join("rustc-std-workspace-core")),
+                    path: Some(rust_src.join("tools").join("rustc-std-workspace-core")),
                     ..Default::default()
                 }),
             );
             x
         });
     //
-    let t = toml::to_string(&t).expect("Failed creating temp Cargo.toml");
-    let path = cfg.target_dir.join("Cargo.toml");
+    let t = toml::to_string(&toml).expect("Failed creating temp Cargo.toml");
+    let path = args.sysroot_dir.join("Cargo.toml");
     std::fs::create_dir_all(path.parent().expect("Impossible")).expect("Failed to create temp dir");
     fs::write(&path, t).expect("Failed writing temp Cargo.toml");
     path
 }
 
 fn build_liballoc(cfg: &BuildConfig) {
-    let path = generate_liballoc_cargo_toml(cfg);
+    // let path = generate_liballoc_cargo_toml(cfg);
+    let path = PathBuf::new();
     //
     let exit = Command::new(env::var_os("CARGO").unwrap())
         .arg("rustc")
@@ -258,12 +269,36 @@ fn main() {
             .expect("Invalid cargo-sysroot metadata")
             .into()
     }));
+    args.rust_src_dir = Some(args.rust_src_dir.unwrap_or_else(|| {
+        let rustc = Command::new("rustc")
+            .arg("--print")
+            .arg("sysroot")
+            .output()
+            .expect("Failed to run `rustc` and get sysroot");
+        let sysroot = PathBuf::from(
+            std::str::from_utf8(&rustc.stdout)
+                .expect("Failed to convert sysroot path to utf-8")
+                .trim(),
+        );
+        sysroot
+            .join("lib")
+            .join("rustlib")
+            .join("src")
+            .join("rust")
+            .join("src")
+    }));
+    args.cargo_profile = toml.profile;
+
     let args = args;
     //
     println!("Building sysroot crates");
     if !args.no_config {
         generate_cargo_config(&args);
     }
+
+    let liballoc_cargo_toml = generate_liballoc_cargo_toml(&args);
+    // build_liballoc();
+
     //
     return;
     let cfg = BuildConfig::new();
