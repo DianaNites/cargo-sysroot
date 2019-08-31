@@ -87,8 +87,8 @@ impl BuildConfig {
         };
         Self {
             rust_src: get_rust_src_dir(),
-            target_dir: get_target_dir(sysroot.clone()),
-            output_dir: get_output_dir(sysroot.clone(), &target),
+            target_dir: get_target_dir(&sysroot),
+            output_dir: get_output_dir(&sysroot, &target),
             local_sysroot: sysroot,
             target: target,
             no_config: no_config,

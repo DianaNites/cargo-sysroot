@@ -40,17 +40,17 @@ pub fn get_local_sysroot_dir() -> PathBuf {
     x.canonicalize().unwrap()
 }
 
-pub fn get_target_dir(mut base: PathBuf) -> PathBuf {
-    base.push("target");
-    base
+pub fn get_target_dir(base: &Path) -> PathBuf {
+    base.join("target")
 }
 
 /// The location IN the local sysroot for libcore and friends.
-pub fn get_output_dir<T: AsRef<Path>>(mut base: PathBuf, target: T) -> PathBuf {
-    base.push("lib");
-    base.push("rustlib");
-    base.push(target.as_ref().file_stem().unwrap());
-    base.push("lib");
+pub fn get_output_dir(base: &Path, target: &Path) -> PathBuf {
+    let base = base
+        .join("lib")
+        .join("rustlib")
+        .join(target.file_stem().expect("Failed to parse target triple"))
+        .join("lib");
     match fs::remove_dir_all(&base) {
         Ok(_) => (),
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => (),
@@ -62,7 +62,6 @@ pub fn get_output_dir<T: AsRef<Path>>(mut base: PathBuf, target: T) -> PathBuf {
 
 /// Host tools such as rust-lld need to be in the sysroot to link correctly.
 /// Copies entire host target, so stuff like tests work.
-#[allow(dead_code)]
 pub fn copy_host_tools(mut local_sysroot: PathBuf) {
     let mut root = get_rustc_sysroot();
     let host = root
