@@ -38,7 +38,13 @@ struct Sysroot {
     #[structopt(long, default_value = "./target")]
     target_dir: PathBuf,
 
+    /// Path to sysroot directory.
+    #[structopt(long, default_value = "./target/sysroot")]
+    sysroot_dir: PathBuf,
+
     /// Target to build for.
+    ///
+    /// Uses the value from `package.metadata.cargo-sysroot.target` as a default.
     #[structopt(long)]
     target: Option<PathBuf>,
 
@@ -54,7 +60,6 @@ struct BuildConfig {
     target: PathBuf,
     target_dir: PathBuf,
     output_dir: PathBuf,
-    no_config: bool,
     profile: Option<Profile>,
 }
 
@@ -83,39 +88,52 @@ impl BuildConfig {
             output_dir: get_output_dir(&sysroot, &target),
             local_sysroot: sysroot,
             target,
-            no_config: args.no_config,
             profile: toml.profile,
         }
     }
 }
 
-fn generate_cargo_config(cfg: &BuildConfig) {
-    let path = PathBuf::from(".cargo/config");
-    fs::create_dir_all(path.parent().unwrap()).unwrap();
-    if path.exists() {
+/// Create a `.cargo/config` to use our target and sysroot.
+///
+/// ## Arguments:
+/// * `target`, path to the target json file.
+fn generate_cargo_config(args: &Sysroot) {
+    let cargo_config = PathBuf::from(".cargo/config");
+    fs::create_dir_all(cargo_config.parent().unwrap()).unwrap();
+    if cargo_config.exists() {
         // TODO: Be smarter, update existing. Warn?
         return;
     }
+    let target = args
+        .target
+        .as_ref()
+        .expect("Missing target triple")
+        .canonicalize()
+        .expect("Couldn't get path to target.json")
+        .to_str()
+        .expect("Failed to convert target.json path to utf-8")
+        .to_string();
+    let sysroot_dir = args
+        .sysroot_dir
+        .to_str()
+        .expect("Failed to convert sysroot path to utf-8");
 
     let config = CargoConfig {
         build: Some(Build {
-            target: Some(cfg.target.canonicalize().unwrap().to_str().unwrap().into()),
-            rustflags: Some(vec![
-                "--sysroot".to_owned(),
-                format!("{}", cfg.local_sysroot.to_str().unwrap()),
-            ]),
+            target: Some(target),
+            rustflags: Some(vec!["--sysroot".to_owned(), format!("{}", sysroot_dir)]),
             ..Default::default()
         }),
         ..Default::default()
     };
     let toml = toml::to_string(&config).unwrap();
 
-    let mut f = fs::OpenOptions::new()
+    let mut file = fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(path)
+        .open(cargo_config)
         .unwrap();
-    f.write_all(toml.as_bytes()).unwrap();
+    file.write_all(toml.as_bytes()).unwrap();
 }
 
 /// The `Cargo.toml` for building the `alloc` crate.
@@ -226,12 +244,29 @@ fn build_liballoc(cfg: &BuildConfig) {
 #[allow(unreachable_code, unused_variables)]
 fn main() {
     // TODO: Eat output if up to date.
-    let cfg = BuildConfig::new();
-    return;
+    let Args::Sysroot(mut args) = Args::from_args();
+    let toml: CargoToml = from_path(&args.manifest_path).expect("Failed to read Cargo.toml");
+
+    args.target = Some(args.target.unwrap_or_else(|| {
+        toml.package
+            .metadata
+            .as_ref()
+            .expect("Missing cargo-sysroot metadata")
+            .get("cargo-sysroot")
+            .expect("Missing cargo-sysroot metadata")["target"]
+            .as_str()
+            .expect("Invalid cargo-sysroot metadata")
+            .into()
+    }));
+    let args = args;
+    //
     println!("Building sysroot crates");
-    if !cfg.no_config {
-        generate_cargo_config(&cfg);
+    if !args.no_config {
+        generate_cargo_config(&args);
     }
+    //
+    return;
+    let cfg = BuildConfig::new();
 
     build_liballoc(&cfg);
 
