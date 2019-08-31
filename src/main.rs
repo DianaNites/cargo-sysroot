@@ -9,16 +9,8 @@
 //! Cargo will automatically rebuild the project and all dependencies
 //! if the files in the sysroot change.
 use cargo_toml2::{
-    from_path,
-    Build,
-    CargoConfig,
-    CargoToml,
-    Dependency,
-    DependencyFull,
-    Package,
-    Patches,
-    Profile,
-    TargetConfig,
+    from_path, Build, CargoConfig, CargoToml, Dependency, DependencyFull, Package, Patches,
+    Profile, TargetConfig,
 };
 use std::{collections::BTreeMap, env, fs, io::prelude::*, path::PathBuf, process::Command};
 use structopt::{clap::AppSettings, StructOpt};
@@ -41,6 +33,10 @@ struct Sysroot {
     /// Path to `Cargo.toml`
     #[structopt(long, default_value = "./Cargo.toml")]
     manifest_path: PathBuf,
+
+    /// Path to target directory.
+    #[structopt(long, default_value = "./target")]
+    target_dir: PathBuf,
 
     /// Target to build for.
     #[structopt(long)]
@@ -122,7 +118,10 @@ fn generate_cargo_config(cfg: &BuildConfig) {
     f.write_all(toml.as_bytes()).unwrap();
 }
 
-fn build_liballoc(cfg: &BuildConfig) {
+/// The `Cargo.toml` for building the `alloc` crate.
+///
+/// Returns the full path to the manifest
+fn generate_liballoc_cargo_toml(cfg: &BuildConfig) -> PathBuf {
     let mut t = CargoToml {
         package: Package {
             name: "alloc".into(),
@@ -132,7 +131,6 @@ fn build_liballoc(cfg: &BuildConfig) {
             ..Default::default()
         },
         lib: Some(TargetConfig {
-            //.
             name: Some("alloc".into()),
             path: Some(cfg.rust_src.join("liballoc").join("lib.rs")),
             ..Default::default()
@@ -179,6 +177,11 @@ fn build_liballoc(cfg: &BuildConfig) {
     let path = cfg.target_dir.join("Cargo.toml");
     std::fs::create_dir_all(path.parent().expect("Impossible")).expect("Failed to create temp dir");
     fs::write(&path, t).expect("Failed writing temp Cargo.toml");
+    path
+}
+
+fn build_liballoc(cfg: &BuildConfig) {
+    let path = generate_liballoc_cargo_toml(cfg);
     //
     let exit = Command::new(env::var_os("CARGO").unwrap())
         .arg("rustc")
@@ -189,7 +192,7 @@ fn build_liballoc(cfg: &BuildConfig) {
         .arg(&cfg.target_dir)
         .arg("--manifest-path")
         .arg(path)
-        .arg("--") // Pass to rusc directly.
+        .arg("--") // Pass to rustc directly.
         .arg("-Z")
         // Should this be configurable? Would anyone want unwinding for the sysroot crates?
         .arg("no-landing-pads")
@@ -220,9 +223,11 @@ fn build_liballoc(cfg: &BuildConfig) {
     }
 }
 
+#[allow(unreachable_code, unused_variables)]
 fn main() {
     // TODO: Eat output if up to date.
     let cfg = BuildConfig::new();
+    return;
     println!("Building sysroot crates");
     if !cfg.no_config {
         generate_cargo_config(&cfg);

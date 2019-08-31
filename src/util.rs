@@ -82,14 +82,14 @@ pub fn copy_host_tools(mut local_sysroot: PathBuf) {
         root.push(&host);
         root
     };
-    let srcm = fs::metadata(&src).unwrap();
-    let tom = fs::metadata(&local_sysroot);
+    let src_meta = fs::metadata(&src).unwrap();
+    let to_meta = fs::metadata(&local_sysroot);
     // If our host tools bin dir doesn't exist it always needs updating.
-    if let Ok(tom) = tom {
+    if let Ok(to_meta) = to_meta {
         // If our sysroot is older than the installed component we need to update
-        // A newer rust-src should always have a newer modifed time.
-        // Whereas we should always have a newer modifed time if we're up to date.
-        if tom.modified().unwrap() > srcm.modified().unwrap() {
+        // A newer rust-src should always have a newer modified time.
+        // Whereas we should always have a newer modified time if we're up to date.
+        if to_meta.modified().unwrap() > src_meta.modified().unwrap() {
             return;
         }
     }
