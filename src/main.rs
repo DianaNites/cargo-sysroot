@@ -20,41 +20,35 @@ use cargo_toml2::{
     Profile,
     TargetConfig,
 };
-use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
 use std::{collections::BTreeMap, env, fs, io::prelude::*, path::PathBuf, process::Command};
+use structopt::{clap::AppSettings, StructOpt};
 
 mod util;
 use crate::util::*;
 
-/// Returns Some is target was passed on the command line, None otherwise.
-fn parse_args() -> (Option<String>, bool) {
-    let args = App::new(crate_name!())
-        .version(crate_version!())
-        .about(crate_description!())
-        .bin_name("cargo")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .setting(AppSettings::GlobalVersion)
-        .subcommand(
-            SubCommand::with_name("sysroot")
-                .about(crate_description!())
-                .arg(
-                    Arg::with_name("target")
-                        .long("target")
-                        .empty_values(false)
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("no_config")
-                        .help("Disable .cargo/config generation")
-                        .long("no-config"),
-                ),
-        )
-        .get_matches();
-    let matches = args.subcommand_matches("sysroot").expect("Impossible");
-    (
-        matches.value_of("target").map(|s| s.to_string()),
-        matches.is_present("no_config"),
-    )
+#[derive(StructOpt, Debug)]
+#[structopt(
+    bin_name = "cargo",
+    global_settings(&[
+        AppSettings::ColoredHelp,
+]))]
+enum Args {
+    Sysroot(Sysroot),
+}
+
+#[derive(StructOpt, Debug)]
+struct Sysroot {
+    /// Path to `Cargo.toml`
+    #[structopt(long, default_value = "./Cargo.toml")]
+    manifest_path: PathBuf,
+
+    /// Target to build for.
+    #[structopt(long)]
+    target: Option<PathBuf>,
+
+    /// Disable .cargo/config generation
+    #[structopt(long)]
+    no_config: bool,
 }
 
 /// Stuff the build command needs.
@@ -70,34 +64,35 @@ struct BuildConfig {
 
 impl BuildConfig {
     fn new() -> Self {
+        let Args::Sysroot(args) = Args::from_args();
+        //
         let sysroot = get_local_sysroot_dir();
-        let toml: CargoToml = from_path("Cargo.toml").expect("Failed to read Cargo.toml");
-        let (target, no_config) = parse_args();
-        let target = match target {
-            Some(x) => PathBuf::from(x),
-            None => toml
-                .package
+        let toml: CargoToml = from_path(args.manifest_path).expect("Failed to read Cargo.toml");
+
+        let target = args.target.unwrap_or_else(|| {
+            toml.package
                 .metadata
+                .as_ref()
                 .expect("Missing cargo-sysroot metadata")
                 .get("cargo-sysroot")
                 .expect("Missing cargo-sysroot metadata")["target"]
                 .as_str()
                 .expect("Invalid cargo-sysroot metadata")
-                .into(),
-        };
+                .into()
+        });
+
         Self {
             rust_src: get_rust_src_dir(),
             target_dir: get_target_dir(&sysroot),
             output_dir: get_output_dir(&sysroot, &target),
             local_sysroot: sysroot,
-            target: target,
-            no_config: no_config,
+            target,
+            no_config: args.no_config,
             profile: toml.profile,
         }
     }
 }
 
-#[allow(dead_code)]
 fn generate_cargo_config(cfg: &BuildConfig) {
     let path = PathBuf::from(".cargo/config");
     fs::create_dir_all(path.parent().unwrap()).unwrap();
