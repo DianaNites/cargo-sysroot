@@ -68,6 +68,7 @@ struct Sysroot {
 
     /// Where to put the built sysroot artifacts.
     /// This should point to somewhere in the new sysroot.
+    /// Example: sysroot/lib/rustlib/target-triple/lib
     #[structopt(skip)]
     sysroot_artifact_dir: Option<PathBuf>,
 }
@@ -281,7 +282,9 @@ fn main() {
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => (),
         _ => panic!("Couldn't clear sysroot"),
     };
-    fs::create_dir_all(&args.sysroot_dir).expect("Couldn't create sysroot");
+    fs::create_dir_all(&args.sysroot_dir).expect("Couldn't create sysroot directory");
+    fs::create_dir_all(args.sysroot_artifact_dir.as_ref().unwrap())
+        .expect("Failed to create sysroot_artifact_dir directory");
 
     let args = args;
     //
