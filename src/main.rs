@@ -12,7 +12,9 @@ use cargo_toml2::{
     from_path, Build, CargoConfig, CargoToml, Dependency, DependencyFull, Package, Patches,
     Profile, TargetConfig,
 };
-use std::{collections::BTreeMap, env, fs, io::prelude::*, path::PathBuf, process::Command};
+use std::{
+    collections::BTreeMap, env, fs, io::prelude::*, path::Path, path::PathBuf, process::Command,
+};
 use structopt::{clap::AppSettings, StructOpt};
 
 mod util;
@@ -63,42 +65,11 @@ struct Sysroot {
     /// Some use-cases require the sysroot crates be built with this matching.
     #[structopt(skip)]
     cargo_profile: Option<Profile>,
-}
 
-/// Stuff the build command needs.
-struct BuildConfig {
-    local_sysroot: PathBuf,
-    target: PathBuf,
-    target_dir: PathBuf,
-    output_dir: PathBuf,
-}
-
-impl BuildConfig {
-    fn new() -> Self {
-        let Args::Sysroot(args) = Args::from_args();
-        //
-        let sysroot = get_local_sysroot_dir();
-        let toml: CargoToml = from_path(args.manifest_path).expect("Failed to read Cargo.toml");
-
-        let target = args.target.unwrap_or_else(|| {
-            toml.package
-                .metadata
-                .as_ref()
-                .expect("Missing cargo-sysroot metadata")
-                .get("cargo-sysroot")
-                .expect("Missing cargo-sysroot metadata")["target"]
-                .as_str()
-                .expect("Invalid cargo-sysroot metadata")
-                .into()
-        });
-
-        Self {
-            target_dir: get_target_dir(&sysroot),
-            output_dir: get_output_dir(&sysroot, &target),
-            local_sysroot: sysroot,
-            target,
-        }
-    }
+    /// Where to put the built sysroot artifacts.
+    /// This should point to somewhere in the new sysroot.
+    #[structopt(skip)]
+    sysroot_artifact_dir: Option<PathBuf>,
 }
 
 /// Create a `.cargo/config` to use our target and sysroot.
@@ -208,17 +179,17 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> PathBuf {
     path
 }
 
-fn build_liballoc(cfg: &BuildConfig) {
-    // let path = generate_liballoc_cargo_toml(cfg);
-    let path = PathBuf::new();
+fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) {
+    let path = liballoc_cargo_toml;
+    let triple = args.target.as_ref().expect("BUG: Missing target triple");
     //
     let exit = Command::new(env::var_os("CARGO").unwrap())
         .arg("rustc")
         .arg("--release")
         .arg("--target")
-        .arg(&cfg.target)
+        .arg(&triple)
         .arg("--target-dir")
-        .arg(&cfg.target_dir)
+        .arg(&args.target_dir)
         .arg("--manifest-path")
         .arg(path)
         .arg("--") // Pass to rustc directly.
@@ -233,8 +204,8 @@ fn build_liballoc(cfg: &BuildConfig) {
     assert!(exit.success(), "Build failed.");
     //
     for entry in fs::read_dir(
-        cfg.target_dir
-            .join(&cfg.target.file_stem().unwrap())
+        args.target_dir
+            .join(&triple.file_stem().expect("Failed to parse target triple"))
             .join("release")
             .join("deps"),
     )
@@ -246,13 +217,16 @@ fn build_liballoc(cfg: &BuildConfig) {
             .into_string()
             .expect("Invalid Unicode in path");
         if name.starts_with("lib") {
-            let out = cfg.output_dir.join(name);
+            let out = args
+                .sysroot_artifact_dir
+                .as_ref()
+                .expect("BUG: Missing sysroot_artifact_dir")
+                .join(name);
             fs::copy(entry.path(), out).expect("Copying failed");
         }
     }
 }
 
-#[allow(unreachable_code, unused_variables)]
 fn main() {
     // TODO: Eat output if up to date.
     let Args::Sysroot(mut args) = Args::from_args();
@@ -288,6 +262,26 @@ fn main() {
             .join("src")
     }));
     args.cargo_profile = toml.profile;
+    args.sysroot_artifact_dir = Some(
+        args.sysroot_dir
+            .join("lib")
+            .join("rustlib")
+            .join(
+                args.target
+                    .as_ref()
+                    .expect("BUG: Somehow missing target triple")
+                    .file_stem()
+                    .expect("Failed to parse target triple"),
+            )
+            .join("lib"),
+    );
+    // Clean-up old artifacts
+    match fs::remove_dir_all(&args.sysroot_dir) {
+        Ok(_) => (),
+        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => (),
+        _ => panic!("Couldn't clear sysroot"),
+    };
+    fs::create_dir_all(&args.sysroot_dir).expect("Couldn't create sysroot");
 
     let args = args;
     //
@@ -296,14 +290,10 @@ fn main() {
         generate_cargo_config(&args);
     }
 
+    // Build liballoc, which will pull in the other sysroot crates and build them, too.
     let liballoc_cargo_toml = generate_liballoc_cargo_toml(&args);
-    // build_liballoc();
+    build_liballoc(&liballoc_cargo_toml, &args);
 
-    //
-    return;
-    let cfg = BuildConfig::new();
-
-    build_liballoc(&cfg);
-
-    copy_host_tools(cfg.local_sysroot.clone());
+    // Copy host tools to the new sysroot, so that stuff like proc-macros and testing can work.
+    copy_host_tools(&args.sysroot_dir);
 }

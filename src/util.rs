@@ -1,11 +1,6 @@
 //! Utility.
 use fs_extra::dir::{copy, CopyOptions};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    process::Command,
-    str,
-};
+use std::{fs, path::Path, path::PathBuf, process::Command, str};
 
 /// Get the configured rustc sysroot.
 /// This is the HOST sysroot.
@@ -18,40 +13,9 @@ fn get_rustc_sysroot() -> PathBuf {
     PathBuf::from(str::from_utf8(&rustc.stdout).unwrap().trim())
 }
 
-/// The location the new sysroot will be at.
-/// This relies on the current working directory.
-/// This returns the canonical path.
-pub fn get_local_sysroot_dir() -> PathBuf {
-    let mut x = PathBuf::new();
-    x.push("target");
-    x.push("sysroot");
-    fs::create_dir_all(&x).unwrap();
-    x.canonicalize().unwrap()
-}
-
-pub fn get_target_dir(base: &Path) -> PathBuf {
-    base.join("target")
-}
-
-/// The location IN the local sysroot for libcore and friends.
-pub fn get_output_dir(base: &Path, target: &Path) -> PathBuf {
-    let base = base
-        .join("lib")
-        .join("rustlib")
-        .join(target.file_stem().expect("Failed to parse target triple"))
-        .join("lib");
-    match fs::remove_dir_all(&base) {
-        Ok(_) => (),
-        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => (),
-        _ => panic!("Couldn't clear sysroot"),
-    };
-    fs::create_dir_all(&base).expect("Couldn't create sysroot");
-    base
-}
-
 /// Host tools such as rust-lld need to be in the sysroot to link correctly.
 /// Copies entire host target, so stuff like tests work.
-pub fn copy_host_tools(mut local_sysroot: PathBuf) {
+pub fn copy_host_tools(local_sysroot: &Path) {
     let mut root = get_rustc_sysroot();
     let host = root
         .file_stem()
@@ -62,9 +26,7 @@ pub fn copy_host_tools(mut local_sysroot: PathBuf) {
         .skip(1)
         .collect::<Vec<_>>()
         .join("-");
-    local_sysroot.push("lib");
-    local_sysroot.push("rustlib");
-    local_sysroot.push(&host);
+    let local_sysroot = local_sysroot.join("lib").join("rustlib").join(&host);
     let src = {
         root.push("lib");
         root.push("rustlib");
