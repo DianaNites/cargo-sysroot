@@ -55,6 +55,7 @@ Note that this tool is currently quite stupid, so it won't attempt to do anythin
 In this case you will have to edit it manually.
 
 This will allow Cargo to properly build your project with the normal commands such as `cargo build`.
+
 You may wish to modify this file to make use of the `target.$triple.runner` key. See the [Cargo Documentation](https://doc.rust-lang.org/cargo/reference/config.html#configuration-keys) for details.
 Note that the author experienced problems with the `$triple` variant not working, and you may experience better success with the `cfg` variant.
 
@@ -63,7 +64,15 @@ Note that doing this will cause cargo to detect that libcore has changed and reb
 
 ## Recommendations
 
-If you have more complicated needs than can be satisfied by `target.$triple.runner`, which doesn't yet support passing arguments, the author recommends using a tool such as [cargo-make](https://crates.io/crates/cargo-make).
+If you have more complicated needs than can be satisfied by `target.$triple.runner`,
+which doesn't support complex-ish modifications of the command line.
+
+The author recommends their own, [`cargo-runner`](https://crates.io/crates/cargo-runner)
+to solve this, it allows specifying the command-line in `Cargo.toml` and applying a suffix
+to the path from Cargo.
+
+Alternatives include [cargo-make](https://crates.io/crates/cargo-make),
+which you can setup to run whatever you like, instead of using `cargo run`.
 
 Use my other crate, [`cargo-image`](https://crates.io/crates/cargo-image) to build an image suitable for running in QEMU.
 
@@ -74,9 +83,10 @@ compiler_builtins is built with the `mem` and `core` features, which provides `m
 
 The sysroot crates will share any profile information your crate specifies. Eg if you enable debug for `release`, the sysroot crates will have that too. This matches `cargo-xbuild` behavior and is required for the `bootloader` crate to function.
 
+You can pass custom rust sources through the `--rust-src-dir` flag.
+
 ## TODO
 
-* Allow specifying a custom `rust-src`.
 * Allow disabling the `mem` feature.
 
 ## FAQ
