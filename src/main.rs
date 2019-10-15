@@ -93,8 +93,13 @@ fn generate_cargo_config(args: &Sysroot) {
         .to_str()
         .expect("Failed to convert target.json path to utf-8")
         .to_string();
+    // canonicalize requires the directory exist, after all.
+    fs::create_dir_all(&args.sysroot_dir).unwrap();
     let sysroot_dir = args
         .sysroot_dir
+        .canonicalize()
+        .expect("Failed to canonicalize `sysroot_dir`");
+    let sysroot_dir = sysroot_dir
         .to_str()
         .expect("Failed to convert sysroot path to utf-8");
 
