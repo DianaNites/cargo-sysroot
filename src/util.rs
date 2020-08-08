@@ -1,6 +1,11 @@
 //! Utility.
 use fs_extra::dir::{copy, CopyOptions};
-use std::{fs, path::Path, path::PathBuf, process::Command, str};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+    str,
+};
 
 /// Get the configured rustc sysroot.
 /// This is the HOST sysroot.
