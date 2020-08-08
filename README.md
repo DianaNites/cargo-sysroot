@@ -1,7 +1,7 @@
 # Cargo-sysroot
 
 [![Crates.io](https://img.shields.io/crates/v/cargo-sysroot.svg)](https://crates.io/crates/cargo-sysroot)
-![maintenance-as-is](https://img.shields.io/badge/maintenance-as--is-yellow.svg)
+![maintenance-experimental](https://img.shields.io/badge/maintenance-experimental-yellow.svg)
 
 A simple tool to compile the sysroot crates for your no_std application, while using the standard cargo tools.
 
