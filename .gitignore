@@ -1,4 +1,4 @@
 /target
-**/*.rs.bk
 /.git*
-.cargo/config
+.cargo
+host.json
