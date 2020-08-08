@@ -51,7 +51,7 @@ struct Sysroot {
     manifest_path: PathBuf,
 
     /// Path to target directory.
-    #[structopt(long, default_value = "./target")]
+    #[structopt(long, default_value = "./target/sysroot/target")]
     target_dir: PathBuf,
 
     /// Path to sysroot directory.
