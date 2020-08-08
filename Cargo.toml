@@ -23,6 +23,7 @@ serde = "1.0.114"
 fs_extra = "1.1.0"
 structopt = "0.3.16"
 cargo-toml2 = "1.3.2"
+anyhow = "1.0.32"
 
 [badges]
 maintenance = { status = "experimental" }

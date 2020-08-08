@@ -8,12 +8,26 @@
 //!
 //! Cargo will automatically rebuild the project and all dependencies
 //! if the files in the sysroot change.
+use anyhow::Result;
 use cargo_toml2::{
-    from_path, Build, CargoConfig, CargoToml, Dependency, DependencyFull, Package, Patches,
-    Profile, TargetConfig,
+    from_path,
+    Build,
+    CargoConfig,
+    CargoToml,
+    Dependency,
+    DependencyFull,
+    Package,
+    Patches,
+    Profile,
+    TargetConfig,
 };
 use std::{
-    collections::BTreeMap, env, fs, io::prelude::*, path::Path, path::PathBuf, process::Command,
+    collections::BTreeMap,
+    env,
+    fs,
+    io::prelude::*,
+    path::{Path, PathBuf},
+    process::Command,
 };
 use structopt::{clap::AppSettings, StructOpt};
 
@@ -106,7 +120,7 @@ fn generate_cargo_config(args: &Sysroot) {
     let config = CargoConfig {
         build: Some(Build {
             target: Some(target),
-            rustflags: Some(vec!["--sysroot".to_owned(), format!("{}", sysroot_dir)]),
+            rustflags: Some(vec!["--sysroot".to_owned(), sysroot_dir.to_string()]),
             ..Default::default()
         }),
         ..Default::default()
@@ -233,7 +247,7 @@ fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) {
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
     // TODO: Eat output if up to date.
     let Args::Sysroot(mut args) = Args::from_args();
     let toml: CargoToml = from_path(&args.manifest_path).expect("Failed to read Cargo.toml");
@@ -298,10 +312,14 @@ fn main() {
         generate_cargo_config(&args);
     }
 
-    // Build liballoc, which will pull in the other sysroot crates and build them, too.
+    // Build liballoc, which will pull in the other sysroot crates and build them,
+    // too.
     let liballoc_cargo_toml = generate_liballoc_cargo_toml(&args);
     build_liballoc(&liballoc_cargo_toml, &args);
 
-    // Copy host tools to the new sysroot, so that stuff like proc-macros and testing can work.
+    // Copy host tools to the new sysroot, so that stuff like proc-macros and
+    // testing can work.
     copy_host_tools(&args.sysroot_dir);
+
+    Ok(())
 }
