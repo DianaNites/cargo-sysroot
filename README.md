@@ -14,7 +14,7 @@ or even the simple `cargo check`. It accomplishes this by generating a `.cargo/c
 * The latest nightly compiler.
 * The `rust-src` component must be installed for the active toolchain.
 * Your `Cargo.toml` file ***MUST*** contain `package.metadata.cargo-sysroot.target`, where `target` is a target specification json file.
-  * A built-in target may also work, but this is untested.
+  * A built-in target also works!
 * OR Pass `--target` on the command line, ex `cargo sysroot --target path/to/target.json`
 
 ### Example `Cargo.toml`
