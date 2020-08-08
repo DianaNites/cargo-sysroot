@@ -8,7 +8,7 @@
 //!
 //! Cargo will automatically rebuild the project and all dependencies
 //! if the files in the sysroot change.
-use anyhow::Result;
+use anyhow::*;
 use cargo_toml2::{
     from_path,
     Build,
@@ -250,37 +250,45 @@ fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) {
 fn main() -> Result<()> {
     // TODO: Eat output if up to date.
     let Args::Sysroot(mut args) = Args::from_args();
-    let toml: CargoToml = from_path(&args.manifest_path).expect("Failed to read Cargo.toml");
+    let toml: CargoToml =
+        from_path(&args.manifest_path).with_context(|| args.manifest_path.display().to_string())?;
 
-    args.target = Some(args.target.unwrap_or_else(|| {
-        toml.package
-            .metadata
-            .as_ref()
-            .expect("Missing cargo-sysroot metadata")
-            .get("cargo-sysroot")
-            .expect("Missing cargo-sysroot metadata")["target"]
-            .as_str()
-            .expect("Invalid cargo-sysroot metadata")
-            .into()
-    }));
-    args.rust_src_dir = Some(args.rust_src_dir.unwrap_or_else(|| {
+    if args.target.is_none() {
+        args.target = Some(
+            toml.package
+                .metadata
+                .context("Missing package metadata")?
+                .get("cargo-sysroot")
+                .context("Missing cargo-sysroot metadata")?
+                .get("target")
+                .context("Missing cargo-sysroot target")?
+                .as_str()
+                .context("Cargo-sysroot target field was not a string")?
+                .into(),
+        );
+    }
+
+    if args.rust_src_dir.is_none() {
         let rustc = Command::new("rustc")
             .arg("--print")
             .arg("sysroot")
-            .output()
-            .expect("Failed to run `rustc` and get sysroot");
+            .output()?;
         let sysroot = PathBuf::from(
             std::str::from_utf8(&rustc.stdout)
-                .expect("Failed to convert sysroot path to utf-8")
+                .context("Failed to convert sysroot path to utf-8")?
                 .trim(),
         );
-        sysroot
-            .join("lib")
-            .join("rustlib")
-            .join("src")
-            .join("rust")
-            .join("src")
-    }));
+        // See <https://github.com/rust-lang/rustup#can-rustup-download-the-rust-source-code>
+        args.rust_src_dir = Some(
+            sysroot
+                .join("lib")
+                .join("rustlib")
+                .join("src")
+                .join("rust")
+                .join("src"),
+        )
+    }
+
     args.cargo_profile = toml.profile;
     args.sysroot_artifact_dir = Some(
         args.sysroot_dir
@@ -289,21 +297,26 @@ fn main() -> Result<()> {
             .join(
                 args.target
                     .as_ref()
-                    .expect("BUG: Somehow missing target triple")
+                    .context("BUG: Somehow missing target triple")?
                     .file_stem()
-                    .expect("Failed to parse target triple"),
+                    .context("Failed to parse target triple")?,
             )
             .join("lib"),
     );
+
     // Clean-up old artifacts
     match fs::remove_dir_all(&args.sysroot_dir) {
         Ok(_) => (),
-        Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => (),
-        _ => panic!("Couldn't clear sysroot"),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
+        e => e.context("Couldn't clean sysroot artifacts")?,
     };
-    fs::create_dir_all(&args.sysroot_dir).expect("Couldn't create sysroot directory");
-    fs::create_dir_all(args.sysroot_artifact_dir.as_ref().unwrap())
-        .expect("Failed to create sysroot_artifact_dir directory");
+    fs::create_dir_all(&args.sysroot_dir).context("Couldn't create sysroot directory")?;
+    fs::create_dir_all(
+        args.sysroot_artifact_dir
+            .as_ref()
+            .expect("BUG: sysroot_artifact_dir"),
+    )
+    .context("Failed to setup sysroot")?;
 
     let args = args;
     //
