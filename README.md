@@ -3,9 +3,9 @@
 [![Crates.io](https://img.shields.io/crates/v/cargo-sysroot.svg)](https://crates.io/crates/cargo-sysroot)
 ![maintenance-as-is](https://img.shields.io/badge/maintenance-as--is-yellow.svg)
 
-A (dumb) tool to compile the sysroot crates for your no_std application.
+A simple tool to compile the sysroot crates for your no_std application, while using the standard cargo tools.
 
-This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool you call once.
+This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool you call once beforehand.
 This has the nice benefit of actually working with standard tools like RLS, clippy,
 or even the simple `cargo check`. It accomplishes this by generating a `.cargo/config` for you.
 
@@ -13,7 +13,7 @@ or even the simple `cargo check`. It accomplishes this by generating a `.cargo/c
 
 * A nightly compiler.
 * The `rust-src` component must be installed for the active toolchain.
-* Your `Cargo.toml` file must contain `package.metadata.cargo-sysroot.target`, where target is a target specification json file.
+* Your `Cargo.toml` file ***MUST*** contain `package.metadata.cargo-sysroot.target`, where `target` is a target specification json file.
   * A built-in target may also work, but this is untested.
 * OR Pass `--target` on the command line, ex `cargo sysroot --target path/to/target.json`
 
@@ -34,16 +34,16 @@ target = "my_custom_target.json" # This is relative to Cargo.toml
 * Run `cargo install cargo-sysroot`.
 * Run `cargo sysroot` in the working directory of your project.
 
-This tool will generate a `.cargo/config` for you that looks something like this.
+This tool will generate a `.cargo/config.toml` for you that looks something like this.
 This can be disabled via the `--no-config` command-line option,
-but note that you will then have to tell cargo about your target and sysroot location some other way.
+but note that you will then have to tell cargo about your target and sysroot location manually.
 
 ```toml
 [build]
-target = "path/to/your/target/specification/json"
+target = <package.metadata.cargo-sysroot.target>
 rustflags = [
     "--sysroot",
-    "full/path/to/target/sysroot",
+    "<project root>/target/sysroot",
 ]
 ```
 
@@ -51,16 +51,16 @@ The sysroot will be located at `target/sysroot` and the target directory for bui
 
 Due to how the rust sysroot works, you can use multiple different target specifications at a time without rebuilding, by simply passing a different `--target` to cargo.
 
-Note that this tool is currently quite stupid, so it won't attempt to do anything if that file already exists.
+Note that this tool is currently quite simple, so it won't attempt to do anything if that file already exists.
 In this case you will have to edit it manually.
 
-This will allow Cargo to properly build your project with the normal commands such as `cargo build`.
+This will allow Cargo to properly build your project with the normal commands, such as `cargo build`.
 
 You may wish to modify this file to make use of the `target.$triple.runner` key. See the [Cargo Documentation](https://doc.rust-lang.org/cargo/reference/config.html#configuration-keys) for details.
 Note that the author experienced problems with the `$triple` variant not working, and you may experience better success with the `cfg` variant.
 
-If you update your Rust nightly version you will need to run `cargo-sysroot` again.
-Note that doing this will cause cargo to detect that libcore has changed and rebuild your entire project.
+If you update your Rust nightly version you will need to run `cargo-sysroot` again,
+causing cargo to detect the update and rebuild the sysroot and your project.
 
 ## Recommendations
 
@@ -90,9 +90,6 @@ You can pass custom rust sources through the `--rust-src-dir` flag.
 * Allow disabling the `mem` feature.
 
 ## FAQ
-
-* Q: Why are all versions before 0.5.0 yanked?
-* A: They didn't work correctly due to bugs or changes in the standard distribution.
 
 * Q: Why did you write this over just using `cargo-xbuild`
 * A: It was easier and simpler than getting `cargo-xbuild` to work reliably or with any other standard tools.
