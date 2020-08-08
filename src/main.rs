@@ -88,39 +88,38 @@ struct Sysroot {
 }
 
 /// Create a `.cargo/config` to use our target and sysroot.
-///
-/// ## Arguments:
-/// * `target`, path to the target json file.
-fn generate_cargo_config(args: &Sysroot) {
-    let cargo_config = PathBuf::from(".cargo/config");
-    fs::create_dir_all(cargo_config.parent().unwrap()).unwrap();
+fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
+    let cargo = Path::new(".cargo");
+    let cargo_config = cargo.join("config.toml");
+    fs::create_dir_all(cargo)?;
+
     if cargo_config.exists() {
         // TODO: Be smarter, update existing. Warn?
-        return;
+        return Ok(());
     }
-    let target = args
-        .target
-        .as_ref()
-        .expect("Missing target triple")
-        .canonicalize()
-        .expect("Couldn't get path to target.json")
+
+    let target = target
+        // .canonicalize()
+        // .with_context(|| {
+        //     format!(
+        //         "Couldn't get absolute path to custom target: {}",
+        //         target.display()
+        //     )
+        // })?
         .to_str()
-        .expect("Failed to convert target.json path to utf-8")
+        .context("Failed to convert target.json path to utf-8")?
         .to_string();
-    // canonicalize requires the directory exist, after all.
-    fs::create_dir_all(&args.sysroot_dir).unwrap();
-    let sysroot_dir = args
-        .sysroot_dir
-        .canonicalize()
-        .expect("Failed to canonicalize `sysroot_dir`");
-    let sysroot_dir = sysroot_dir
+    let sysroot_dir = sysroot
+        // .canonicalize()
+        // .context("Couldn't get canonical path to sysroot")?
         .to_str()
-        .expect("Failed to convert sysroot path to utf-8");
+        .context("Failed to convert sysroot path to utf-8")?
+        .to_string();
 
     let config = CargoConfig {
         build: Some(Build {
             target: Some(target),
-            rustflags: Some(vec!["--sysroot".to_owned(), sysroot_dir.to_string()]),
+            rustflags: Some(vec!["--sysroot".to_owned(), sysroot_dir]),
             ..Default::default()
         }),
         ..Default::default()
@@ -130,9 +129,9 @@ fn generate_cargo_config(args: &Sysroot) {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(cargo_config)
-        .unwrap();
-    file.write_all(toml.as_bytes()).unwrap();
+        .open(cargo_config)?;
+    file.write_all(toml.as_bytes())?;
+    Ok(())
 }
 
 /// The `Cargo.toml` for building the `alloc` crate.
@@ -319,10 +318,11 @@ fn main() -> Result<()> {
     .context("Failed to setup sysroot")?;
 
     let args = args;
-    //
+
     println!("Building sysroot crates");
     if !args.no_config {
-        generate_cargo_config(&args);
+        generate_cargo_config(args.target.as_ref().unwrap(), &args.sysroot_dir)
+            .context("Couldn't create .cargo/config.toml")?;
     }
 
     // Build liballoc, which will pull in the other sysroot crates and build them,
