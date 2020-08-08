@@ -191,13 +191,15 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
                     ..Default::default()
                 }),
             );
-            x.insert(
-                "rustc-std-workspace-alloc".to_string(),
-                Dependency::Full(DependencyFull {
-                    path: Some(rust_src.join("tools").join("rustc-std-workspace-alloc")),
-                    ..Default::default()
-                }),
-            );
+            // Unused, causes a warning.
+            //
+            // x.insert(
+            //     "rustc-std-workspace-alloc".to_string(),
+            //     Dependency::Full(DependencyFull {
+            //         path: Some(rust_src.join("tools").join("rustc-std-workspace-alloc")),
+            //         ..Default::default()
+            //     }),
+            // );
             x
         });
 
@@ -215,22 +217,24 @@ fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) -> Result<()> {
         .arg("rustc")
         .arg("--release")
         .arg("--target")
-        .arg(
-            &triple
-                .canonicalize()
-                .context("Couldn't get full path to custom target.json")?,
-        )
+        .arg(&triple.canonicalize().with_context(|| {
+            format!(
+                "Couldn't get full path to custom target.json: {}",
+                triple.display()
+            )
+        })?)
         .arg("--target-dir")
         .arg(&args.target_dir)
         .arg("--manifest-path")
         .arg(path)
         .arg("--") // Pass to rustc directly.
         .arg("-Z")
-        // The rust build system only passes this for rustc, but xbuild passes this for liballoc. 🤷
+        // The rust build system only passes this for rustc? xbuild passes this for liballoc. 🤷‍♀️
         .arg("force-unstable-if-unmarked")
         .status()
         .context("Build failed")?;
 
+    // Copy artifacts to sysroot.
     for entry in fs::read_dir(
         args.target_dir
             .join(
