@@ -11,7 +11,7 @@ or even the simple `cargo check`. It accomplishes this by generating a `.cargo/c
 
 ## Prerequisite
 
-* A nightly compiler.
+* The latest nightly compiler.
 * The `rust-src` component must be installed for the active toolchain.
 * Your `Cargo.toml` file ***MUST*** contain `package.metadata.cargo-sysroot.target`, where `target` is a target specification json file.
   * A built-in target may also work, but this is untested.
@@ -35,8 +35,7 @@ target = "my_custom_target.json" # This is relative to Cargo.toml
 * Run `cargo sysroot` in the working directory of your project.
 
 This tool will generate a `.cargo/config.toml` for you that looks something like this.
-This can be disabled via the `--no-config` command-line option,
-but note that you will then have to tell cargo about your target and sysroot location manually.
+This can be disabled via the `--no-config` command-line option.
 
 ```toml
 [build]
@@ -79,15 +78,16 @@ Use my other crate, [`cargo-image`](https://crates.io/crates/cargo-image) to bui
 ## Details
 
 The sysroot crates are compiled with the `--release` switch.
-compiler_builtins is built with the `mem` and `core` features, which provides `memcpy` and related.
+`compiler_builtins` is built with the `mem` and `core` features, which provides `memcpy` and related.
 
-The sysroot crates will share any profile information your crate specifies. Eg if you enable debug for `release`, the sysroot crates will have that too. This matches `cargo-xbuild` behavior and is required for the `bootloader` crate to function.
+The sysroot crates will share any profile information your crate specifies. Eg if you enable debug for `release`, the sysroot crates will have that too. This matches `cargo-xbuild` behavior and some crates,
+for example `bootloader`, require this to function.
 
 You can pass custom rust sources through the `--rust-src-dir` flag.
 
 ## TODO
 
-* Allow disabling the `mem` feature.
+* Allow disabling the `mem` feature?
 
 ## FAQ
 
