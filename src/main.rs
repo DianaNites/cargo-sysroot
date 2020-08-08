@@ -245,20 +245,27 @@ fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) -> Result<()> {
             .join("release")
             .join("deps"),
     )
-    .expect("Failure to read directory")
+    .context("Failure to read artifact directory")?
     {
-        let entry = entry.expect("Failure to read entry");
+        let entry = entry?;
         let name = entry
             .file_name()
             .into_string()
-            .expect("Invalid Unicode in path");
+            .map_err(|e| Error::msg(e.to_string_lossy().to_string()))
+            .context("Invalid Unicode in path")?;
         if name.starts_with("lib") {
             let out = args
                 .sysroot_artifact_dir
                 .as_ref()
-                .expect("BUG: Missing sysroot_artifact_dir")
+                .context("BUG: Missing sysroot_artifact_dir")?
                 .join(name);
-            fs::copy(entry.path(), out).expect("Copying failed");
+            fs::copy(entry.path(), &out).with_context(|| {
+                format!(
+                    "Copying sysroot artifact from {} to {} failed",
+                    entry.path().display(),
+                    out.display()
+                )
+            })?;
         }
     }
 
