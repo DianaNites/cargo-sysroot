@@ -1,32 +1,36 @@
 //! Utility.
+use anyhow::*;
 use fs_extra::dir::{copy, CopyOptions};
 use std::{
     fs,
     path::{Path, PathBuf},
     process::Command,
-    str,
 };
 
 /// Get the configured rustc sysroot.
 /// This is the HOST sysroot.
-fn get_rustc_sysroot() -> PathBuf {
+pub fn get_rustc_sysroot() -> Result<PathBuf> {
     let rustc = Command::new("rustc")
         .arg("--print")
         .arg("sysroot")
-        .output()
-        .unwrap();
-    PathBuf::from(str::from_utf8(&rustc.stdout).unwrap().trim())
+        .output()?;
+    let sysroot = PathBuf::from(
+        std::str::from_utf8(&rustc.stdout)
+            .context("Failed to convert sysroot path to utf-8")?
+            .trim(),
+    );
+    Ok(sysroot)
 }
 
 /// Host tools such as rust-lld need to be in the sysroot to link correctly.
 /// Copies entire host target, so stuff like tests work.
-pub fn copy_host_tools(local_sysroot: &Path) {
-    let mut root = get_rustc_sysroot();
+pub fn copy_host_tools(local_sysroot: &Path) -> Result<()> {
+    let mut root = get_rustc_sysroot()?;
     let host = root
         .file_stem()
-        .unwrap()
+        .context("Couldn't get host sysroot")?
         .to_str()
-        .unwrap()
+        .context("Invalid utf-8 in host sysroot path")?
         .split('-')
         .skip(1)
         .collect::<Vec<_>>()
@@ -38,7 +42,7 @@ pub fn copy_host_tools(local_sysroot: &Path) {
         root.push(&host);
         root
     };
-    let src_meta = fs::metadata(&src).unwrap();
+    let src_meta = fs::metadata(&src)?;
     let to_meta = fs::metadata(&local_sysroot);
     // If our host tools bin dir doesn't exist it always needs updating.
     if let Ok(to_meta) = to_meta {
@@ -46,11 +50,11 @@ pub fn copy_host_tools(local_sysroot: &Path) {
         // A newer rust-src should always have a newer modified time.
         // Whereas we should always have a newer modified time if we're up to date.
         if to_meta.modified().unwrap() > src_meta.modified().unwrap() {
-            return;
+            return Ok(());
         }
     }
-    fs::create_dir_all(&local_sysroot).unwrap();
     let mut options = CopyOptions::new();
     options.overwrite = true;
-    copy(src, local_sysroot.parent().unwrap(), &options).unwrap();
+    copy(src, local_sysroot.parent().unwrap(), &options)?;
+    Ok(())
 }

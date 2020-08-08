@@ -294,18 +294,9 @@ fn main() -> Result<()> {
     }
 
     if args.rust_src_dir.is_none() {
-        let rustc = Command::new("rustc")
-            .arg("--print")
-            .arg("sysroot")
-            .output()?;
-        let sysroot = PathBuf::from(
-            std::str::from_utf8(&rustc.stdout)
-                .context("Failed to convert sysroot path to utf-8")?
-                .trim(),
-        );
         // See <https://github.com/rust-lang/rustup#can-rustup-download-the-rust-source-code>
         args.rust_src_dir = Some(
-            sysroot
+            get_rustc_sysroot()?
                 .join("lib")
                 .join("rustlib")
                 .join("src")
@@ -359,7 +350,7 @@ fn main() -> Result<()> {
 
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
     // testing can work.
-    copy_host_tools(&args.sysroot_dir);
+    copy_host_tools(&args.sysroot_dir).context("Couldn't copy host tools to sysroot")?;
 
     Ok(())
 }
