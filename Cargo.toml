@@ -7,13 +7,7 @@ readme = "README.md"
 repository = "https://github.com/DianaNites/cargo-sysroot"
 description = "Simply and Easily cross-compile the Rust sysroot crates."
 license = "MIT OR Apache-2.0"
-keywords = [
-    "sysroot",
-    "libcore",
-    "no_std",
-    "cross",
-    "compilation",
-]
+keywords = ["sysroot", "libcore", "no_std", "cross", "compilation"]
 categories = [
     "no-std",
     "embedded",
