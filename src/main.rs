@@ -207,33 +207,37 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) {
+fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) -> Result<()> {
     let path = liballoc_cargo_toml;
-    let triple = args.target.as_ref().expect("BUG: Missing target triple");
-    //
-    let exit = Command::new(env::var_os("CARGO").unwrap())
+    let triple = args.target.as_ref().context("BUG: Missing target triple")?;
+
+    let _exit = Command::new(env::var_os("CARGO").context("Couldn't find cargo command")?)
         .arg("rustc")
         .arg("--release")
         .arg("--target")
-        .arg(&triple)
+        .arg(
+            &triple
+                .canonicalize()
+                .context("Couldn't get full path to custom target.json")?,
+        )
         .arg("--target-dir")
         .arg(&args.target_dir)
         .arg("--manifest-path")
         .arg(path)
         .arg("--") // Pass to rustc directly.
         .arg("-Z")
-        // Should this be configurable? Would anyone want unwinding for the sysroot crates?
-        .arg("no-landing-pads")
-        .arg("-Z")
         // The rust build system only passes this for rustc, but xbuild passes this for liballoc. 🤷
         .arg("force-unstable-if-unmarked")
         .status()
-        .expect("Build failed.");
-    assert!(exit.success(), "Build failed.");
-    //
+        .context("Build failed")?;
+
     for entry in fs::read_dir(
         args.target_dir
-            .join(&triple.file_stem().expect("Failed to parse target triple"))
+            .join(
+                &triple
+                    .file_stem()
+                    .context("Failed to parse target triple")?,
+            )
             .join("release")
             .join("deps"),
     )
@@ -253,6 +257,8 @@ fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) {
             fs::copy(entry.path(), out).expect("Copying failed");
         }
     }
+
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -336,8 +342,9 @@ fn main() -> Result<()> {
 
     // Build liballoc, which will pull in the other sysroot crates and build them,
     // too.
-    let liballoc_cargo_toml = generate_liballoc_cargo_toml(&args)?;
-    build_liballoc(&liballoc_cargo_toml, &args);
+    let liballoc_cargo_toml =
+        generate_liballoc_cargo_toml(&args).context("Failed to generate sysroot Cargo.toml")?;
+    build_liballoc(&liballoc_cargo_toml, &args).context("Failed to build sysroot")?;
 
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
     // testing can work.
