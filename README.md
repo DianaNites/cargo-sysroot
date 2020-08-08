@@ -78,7 +78,7 @@ Use my other crate, [`cargo-image`](https://crates.io/crates/cargo-image) to bui
 ## Details
 
 The sysroot crates are compiled with the `--release` switch.
-`compiler_builtins` is built with the `mem` and `core` features, which provides `memcpy` and related.
+`compiler_builtins` is built with the `mem` and `rustc-dep-of-std` features, which provides `memcpy` and related.
 
 The sysroot crates will share any profile information your crate specifies. Eg if you enable debug for `release`, the sysroot crates will have that too. This matches `cargo-xbuild` behavior and some crates,
 for example `bootloader`, require this to function.

@@ -137,8 +137,11 @@ fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
 /// The `Cargo.toml` for building the `alloc` crate.
 ///
 /// Returns the full path to the manifest
-fn generate_liballoc_cargo_toml(args: &Sysroot) -> PathBuf {
-    let rust_src = args.rust_src_dir.as_ref().expect("BUG: Missing rust-src");
+fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
+    let rust_src = args
+        .rust_src_dir
+        .as_ref()
+        .context("BUG: Missing rust-src")?;
 
     let mut toml = CargoToml {
         package: Package {
@@ -171,7 +174,7 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> PathBuf {
         "compiler_builtins".into(),
         Dependency::Full(DependencyFull {
             version: Some("0.1.0".into()),
-            features: Some(vec!["core".into(), "mem".into()]),
+            features: Some(vec!["rustc-dep-of-std".into(), "mem".into()]),
             ..Default::default()
         }),
     );
@@ -188,14 +191,20 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> PathBuf {
                     ..Default::default()
                 }),
             );
+            x.insert(
+                "rustc-std-workspace-alloc".to_string(),
+                Dependency::Full(DependencyFull {
+                    path: Some(rust_src.join("tools").join("rustc-std-workspace-alloc")),
+                    ..Default::default()
+                }),
+            );
             x
         });
-    //
-    let t = toml::to_string(&toml).expect("Failed creating temp Cargo.toml");
+
+    let t = toml::to_string(&toml).context("Failed creating sysroot Cargo.toml")?;
     let path = args.sysroot_dir.join("Cargo.toml");
-    std::fs::create_dir_all(path.parent().expect("Impossible")).expect("Failed to create temp dir");
-    fs::write(&path, t).expect("Failed writing temp Cargo.toml");
-    path
+    fs::write(&path, t).context("Failed writing sysroot Cargo.toml")?;
+    Ok(path)
 }
 
 fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) {
@@ -327,7 +336,7 @@ fn main() -> Result<()> {
 
     // Build liballoc, which will pull in the other sysroot crates and build them,
     // too.
-    let liballoc_cargo_toml = generate_liballoc_cargo_toml(&args);
+    let liballoc_cargo_toml = generate_liballoc_cargo_toml(&args)?;
     build_liballoc(&liballoc_cargo_toml, &args);
 
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
