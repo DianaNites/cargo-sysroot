@@ -217,12 +217,8 @@ fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) -> Result<()> {
         .arg("rustc")
         .arg("--release")
         .arg("--target")
-        .arg(&triple.canonicalize().with_context(|| {
-            format!(
-                "Couldn't get full path to custom target.json: {}",
-                triple.display()
-            )
-        })?)
+        // If it doesn't work, assume it's a builtin path?
+        .arg(&triple.canonicalize().unwrap_or_else(|_| triple.into()))
         .arg("--target-dir")
         .arg(&args.target_dir)
         .arg("--manifest-path")

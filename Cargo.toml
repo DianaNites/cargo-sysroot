@@ -27,4 +27,4 @@ anyhow = "1.0.32"
 maintenance = { status = "experimental" }
 
 [package.metadata.cargo-sysroot]
-target = "host.json"
+target = "x86_64-unknown-uefi"
