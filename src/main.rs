@@ -1,5 +1,5 @@
 //! Cargo-SysRoot
-//! Compiles libcore and libcompiler_builtins.
+//! Compiles core and compiler_builtins.
 //!
 //! Cargo.toml package.metadata.cargo-sysroot.target should be set
 //! to the path of a Target Specification
@@ -137,7 +137,7 @@ fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
 /// The `Cargo.toml` for building the `alloc` crate.
 ///
 /// Returns the full path to the manifest
-fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
+fn generate_alloc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
     let rust_src = args
         .rust_src_dir
         .as_ref()
@@ -153,7 +153,7 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
         },
         lib: Some(TargetConfig {
             name: Some("alloc".into()),
-            path: Some(rust_src.join("liballoc").join("lib.rs")),
+            path: Some(rust_src.join("alloc").join("src").join("lib.rs")),
             ..Default::default()
         }),
         dependencies: Some(BTreeMap::new()),
@@ -166,14 +166,14 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
     toml.dependencies.as_mut().unwrap().insert(
         "core".into(),
         Dependency::Full(DependencyFull {
-            path: Some(rust_src.join("libcore")),
+            path: Some(rust_src.join("core")),
             ..Default::default()
         }),
     );
     toml.dependencies.as_mut().unwrap().insert(
         "compiler_builtins".into(),
         Dependency::Full(DependencyFull {
-            version: Some("0.1.0".into()),
+            version: Some("0.1.10".into()),
             features: Some(vec!["rustc-dep-of-std".into(), "mem".into()]),
             ..Default::default()
         }),
@@ -187,7 +187,7 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
             x.insert(
                 "rustc-std-workspace-core".to_string(),
                 Dependency::Full(DependencyFull {
-                    path: Some(rust_src.join("tools").join("rustc-std-workspace-core")),
+                    path: Some(rust_src.join("rustc-std-workspace-core")),
                     ..Default::default()
                 }),
             );
@@ -196,7 +196,7 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
             // x.insert(
             //     "rustc-std-workspace-alloc".to_string(),
             //     Dependency::Full(DependencyFull {
-            //         path: Some(rust_src.join("tools").join("rustc-std-workspace-alloc")),
+            //         path: Some(rust_src.join("rustc-std-workspace-alloc")),
             //         ..Default::default()
             //     }),
             // );
@@ -209,8 +209,8 @@ fn generate_liballoc_cargo_toml(args: &Sysroot) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) -> Result<()> {
-    let path = liballoc_cargo_toml;
+fn build_alloc(alloc_cargo_toml: &Path, args: &Sysroot) -> Result<()> {
+    let path = alloc_cargo_toml;
     let triple = args.target.as_ref().context("BUG: Missing target triple")?;
 
     let _exit = Command::new(env::var_os("CARGO").context("Couldn't find cargo command")?)
@@ -225,7 +225,7 @@ fn build_liballoc(liballoc_cargo_toml: &Path, args: &Sysroot) -> Result<()> {
         .arg(path)
         .arg("--") // Pass to rustc directly.
         .arg("-Z")
-        // The rust build system only passes this for rustc? xbuild passes this for liballoc. 🤷‍♀️
+        // The rust build system only passes this for rustc? xbuild passes this for alloc. 🤷‍♀️
         .arg("force-unstable-if-unmarked")
         .status()
         .context("Build failed")?;
@@ -290,15 +290,7 @@ fn main() -> Result<()> {
     }
 
     if args.rust_src_dir.is_none() {
-        // See <https://github.com/rust-lang/rustup#can-rustup-download-the-rust-source-code>
-        args.rust_src_dir = Some(
-            get_rustc_sysroot()?
-                .join("lib")
-                .join("rustlib")
-                .join("src")
-                .join("rust")
-                .join("src"),
-        )
+        args.rust_src_dir = Some(get_rust_src()?)
     }
 
     args.cargo_profile = toml.profile;
@@ -340,9 +332,9 @@ fn main() -> Result<()> {
 
     // Build liballoc, which will pull in the other sysroot crates and build them,
     // too.
-    let liballoc_cargo_toml =
-        generate_liballoc_cargo_toml(&args).context("Failed to generate sysroot Cargo.toml")?;
-    build_liballoc(&liballoc_cargo_toml, &args).context("Failed to build sysroot")?;
+    let alloc_cargo_toml =
+        generate_alloc_cargo_toml(&args).context("Failed to generate sysroot Cargo.toml")?;
+    build_alloc(&alloc_cargo_toml, &args).context("Failed to build sysroot")?;
 
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
     // testing can work.

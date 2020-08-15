@@ -22,6 +22,17 @@ pub fn get_rustc_sysroot() -> Result<PathBuf> {
     Ok(sysroot)
 }
 
+/// Get the rust-src stuff
+pub fn get_rust_src() -> Result<PathBuf> {
+    // See <https://github.com/rust-lang/rustup#can-rustup-download-the-rust-source-code>
+    Ok(get_rustc_sysroot()?
+        .join("lib")
+        .join("rustlib")
+        .join("src")
+        .join("rust")
+        .join("library"))
+}
+
 /// Host tools such as rust-lld need to be in the sysroot to link correctly.
 /// Copies entire host target, so stuff like tests work.
 pub fn copy_host_tools(local_sysroot: &Path) -> Result<()> {
