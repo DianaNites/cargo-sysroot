@@ -8,22 +8,12 @@
 //! The sysroot is located in `.target/sysroot`
 use anyhow::*;
 use cargo_toml2::{from_path, CargoToml};
-use std::fs;
-use structopt::{clap::AppSettings, StructOpt};
+use structopt::StructOpt;
 
+#[allow(dead_code)]
 mod util;
-use crate::util::*;
+use crate::{args::*, util::get_rust_src};
 use cargo_sysroot::*;
-
-#[derive(StructOpt, Debug)]
-#[structopt(
-    bin_name = "cargo",
-    global_settings(&[
-        AppSettings::ColoredHelp,
-]))]
-enum Args {
-    Sysroot(Sysroot),
-}
 
 fn main() -> Result<()> {
     // TODO: Eat output if up to date.
@@ -51,33 +41,14 @@ fn main() -> Result<()> {
     }
 
     args.cargo_profile = toml.profile;
-    args.sysroot_artifact_dir = Some(
-        args.sysroot_dir
-            .join("lib")
-            .join("rustlib")
-            .join(
-                args.target
-                    .as_ref()
-                    .context("BUG: Somehow missing target triple")?
-                    .file_stem()
-                    .context("Failed to parse target triple")?,
-            )
-            .join("lib"),
-    );
-
-    // Clean-up old artifacts
-    match fs::remove_dir_all(&args.sysroot_dir) {
-        Ok(_) => (),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
-        e => e.context("Couldn't clean sysroot artifacts")?,
-    };
-    fs::create_dir_all(&args.sysroot_dir).context("Couldn't create sysroot directory")?;
-    fs::create_dir_all(
-        args.sysroot_artifact_dir
+    args.sysroot_artifact_dir = Some(artifact_dir(
+        &args.sysroot_dir,
+        args.target
             .as_ref()
-            .expect("BUG: sysroot_artifact_dir"),
-    )
-    .context("Failed to setup sysroot")?;
+            .context("BUG: Somehow missing target triple")?,
+    )?);
+
+    clean_artifacts(&args.sysroot_dir)?;
 
     let args = args;
 
@@ -87,15 +58,14 @@ fn main() -> Result<()> {
             .context("Couldn't create .cargo/config.toml")?;
     }
 
-    // Build liballoc, which will pull in the other sysroot crates and build them,
-    // too.
-    let alloc_cargo_toml =
-        generate_alloc_cargo_toml(&args).context("Failed to generate sysroot Cargo.toml")?;
-    build_alloc(&alloc_cargo_toml, &args).context("Failed to build sysroot")?;
-
-    // Copy host tools to the new sysroot, so that stuff like proc-macros and
-    // testing can work.
-    copy_host_tools(&args.sysroot_dir).context("Couldn't copy host tools to sysroot")?;
+    build_sysroot_with(
+        &args.manifest_path,
+        &args.sysroot_dir,
+        args.target
+            .as_ref()
+            .context("BUG: Somehow missing target triple")?,
+        args.rust_src_dir.as_ref().unwrap(),
+    )?;
 
     Ok(())
 }
