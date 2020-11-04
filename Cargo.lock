@@ -40,7 +40,6 @@ dependencies = [
  "cargo-toml2",
  "fs_extra",
  "structopt",
- "toml",
 ]
 
 [[package]]

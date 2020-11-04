@@ -7,8 +7,8 @@
 //!
 //! The sysroot is located in `.target/sysroot`
 use anyhow::*;
-use cargo_toml2::{from_path, Build, CargoConfig, CargoToml};
-use std::{fs, io::prelude::*, path::Path};
+use cargo_toml2::{from_path, to_path, Build, CargoConfig, CargoToml};
+use std::{fs, path::Path};
 use structopt::StructOpt;
 
 mod args;
@@ -54,13 +54,8 @@ fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
         }),
         ..Default::default()
     };
-    let toml = toml::to_string(&config).unwrap();
+    to_path(&cargo_config, &config).context("Failed writing sysroot Cargo.toml")?;
 
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(cargo_config)?;
-    file.write_all(toml.as_bytes())?;
     Ok(())
 }
 

@@ -16,6 +16,7 @@
 use anyhow::*;
 use cargo_toml2::{
     from_path,
+    to_path,
     CargoToml,
     Dependency,
     DependencyFull,
@@ -105,9 +106,8 @@ fn generate_alloc_cargo_toml(
             x
         });
 
-    let t = toml::to_string(&toml).context("Failed creating sysroot Cargo.toml")?;
     let path = sysroot_dir.join("Cargo.toml");
-    fs::write(&path, t).context("Failed writing sysroot Cargo.toml")?;
+    to_path(&path, &toml).context("Failed writing sysroot Cargo.toml")?;
     Ok(path)
 }
 
