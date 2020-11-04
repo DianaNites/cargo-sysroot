@@ -9,7 +9,7 @@ use std::{
 
 /// Get the configured rustc sysroot.
 /// This is the HOST sysroot.
-pub fn get_rustc_sysroot() -> Result<PathBuf> {
+fn get_rustc_sysroot() -> Result<PathBuf> {
     let rustc = Command::new("rustc")
         .arg("--print")
         .arg("sysroot")
