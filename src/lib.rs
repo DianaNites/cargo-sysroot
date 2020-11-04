@@ -257,7 +257,7 @@ pub fn build_sysroot_with(
     sysroot: &Path,
     target: &Path,
     rust_src: &Path,
-) -> Result<()> {
+) -> Result<PathBuf> {
     fs::create_dir_all(sysroot).context("Couldn't create sysroot directory")?;
     fs::create_dir_all(artifact_dir(sysroot, target)?).context("Failed to setup sysroot")?;
 
@@ -268,17 +268,22 @@ pub fn build_sysroot_with(
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
     // testing can work.
     util::copy_host_tools(sysroot).context("Couldn't copy host tools to sysroot")?;
-    Ok(())
+    Ok(sysroot
+        .canonicalize()
+        .context("Couldn't get canonical path to sysroot")?)
 }
 
 /// Build the Rust sysroot crates.
+///
+/// Returns the path to use for the sysroot.
 ///
 /// This will build the sysroot crates, using:
 /// - any profiles from `./Cargo.toml`
 /// - `./target/sysroot` as the sysroot directory
 /// - `package.metadata.cargo-sysroot.target` as the target triple
 /// - The current rustup `rust_src` component.
-pub fn build_sysroot() -> Result<()> {
+pub fn build_sysroot() -> Result<PathBuf> {
+    let sysroot = Path::new("target").join("sysroot");
     let manifest_path = Path::new("Cargo.toml");
     let toml: CargoToml =
         from_path(manifest_path).with_context(|| manifest_path.display().to_string())?;
@@ -293,11 +298,5 @@ pub fn build_sysroot() -> Result<()> {
         .as_str()
         .context("Cargo-sysroot target field was not a string")?
         .into();
-    build_sysroot_with(
-        manifest_path,
-        &Path::new("target").join("sysroot"),
-        &target,
-        &util::get_rust_src()?,
-    )?;
-    Ok(())
+    build_sysroot_with(manifest_path, &sysroot, &target, &util::get_rust_src()?)
 }
