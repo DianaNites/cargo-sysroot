@@ -16,8 +16,6 @@
 use anyhow::*;
 use cargo_toml2::{
     from_path,
-    Build,
-    CargoConfig,
     CargoToml,
     Dependency,
     DependencyFull,
@@ -29,7 +27,6 @@ use std::{
     collections::BTreeMap,
     env,
     fs,
-    io::prelude::*,
     path::{Path, PathBuf},
     process::Command,
 };
@@ -38,56 +35,6 @@ use std::{
 pub mod args;
 #[allow(dead_code)]
 mod util;
-
-/// Create a `.cargo/config` to use our target and sysroot.
-///
-/// Not part of the public API.
-#[doc(hidden)]
-pub fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
-    let cargo = Path::new(".cargo");
-    let cargo_config = cargo.join("config.toml");
-    fs::create_dir_all(cargo)?;
-
-    if cargo_config.exists() {
-        // TODO: Be smarter, update existing. Warn?
-        return Ok(());
-    }
-
-    let target = target
-        // .canonicalize()
-        // .with_context(|| {
-        //     format!(
-        //         "Couldn't get absolute path to custom target: {}",
-        //         target.display()
-        //     )
-        // })?
-        .to_str()
-        .context("Failed to convert target.json path to utf-8")?
-        .to_string();
-    let sysroot_dir = sysroot
-        .canonicalize()
-        .context("Couldn't get canonical path to sysroot")?
-        .to_str()
-        .context("Failed to convert sysroot path to utf-8")?
-        .to_string();
-
-    let config = CargoConfig {
-        build: Some(Build {
-            target: Some(target),
-            rustflags: Some(vec!["--sysroot".to_owned(), sysroot_dir]),
-            ..Default::default()
-        }),
-        ..Default::default()
-    };
-    let toml = toml::to_string(&config).unwrap();
-
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(cargo_config)?;
-    file.write_all(toml.as_bytes())?;
-    Ok(())
-}
 
 /// The `Cargo.toml` for building the `alloc` crate.
 ///

@@ -7,13 +7,61 @@
 //!
 //! The sysroot is located in `.target/sysroot`
 use anyhow::*;
-use cargo_toml2::{from_path, CargoToml};
+use cargo_toml2::{from_path, Build, CargoConfig, CargoToml};
+use std::{fs, io::prelude::*, path::Path};
 use structopt::StructOpt;
 
 #[allow(dead_code)]
 mod util;
 use crate::{args::*, util::get_rust_src};
 use cargo_sysroot::*;
+
+/// Create a `.cargo/config` to use our target and sysroot.
+fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
+    let cargo = Path::new(".cargo");
+    let cargo_config = cargo.join("config.toml");
+    fs::create_dir_all(cargo)?;
+
+    if cargo_config.exists() {
+        // TODO: Be smarter, update existing. Warn?
+        return Ok(());
+    }
+
+    let target = target
+        // .canonicalize()
+        // .with_context(|| {
+        //     format!(
+        //         "Couldn't get absolute path to custom target: {}",
+        //         target.display()
+        //     )
+        // })?
+        .to_str()
+        .context("Failed to convert target.json path to utf-8")?
+        .to_string();
+    let sysroot_dir = sysroot
+        .canonicalize()
+        .context("Couldn't get canonical path to sysroot")?
+        .to_str()
+        .context("Failed to convert sysroot path to utf-8")?
+        .to_string();
+
+    let config = CargoConfig {
+        build: Some(Build {
+            target: Some(target),
+            rustflags: Some(vec!["--sysroot".to_owned(), sysroot_dir]),
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    let toml = toml::to_string(&config).unwrap();
+
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(cargo_config)?;
+    file.write_all(toml.as_bytes())?;
+    Ok(())
+}
 
 fn main() -> Result<()> {
     // TODO: Eat output if up to date.
@@ -41,12 +89,14 @@ fn main() -> Result<()> {
     }
 
     args.cargo_profile = toml.profile;
-    args.sysroot_artifact_dir = Some(artifact_dir(
-        &args.sysroot_dir,
-        args.target
-            .as_ref()
-            .context("BUG: Somehow missing target triple")?,
-    )?);
+    if args.sysroot_artifact_dir.is_none() {
+        args.sysroot_artifact_dir = Some(artifact_dir(
+            &args.sysroot_dir,
+            args.target
+                .as_ref()
+                .context("BUG: Somehow missing target triple")?,
+        )?);
+    }
 
     clean_artifacts(&args.sysroot_dir)?;
 
