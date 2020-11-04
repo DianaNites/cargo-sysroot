@@ -54,7 +54,9 @@ fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
         }),
         ..Default::default()
     };
-    to_path(&cargo_config, &config).context("Failed writing sysroot Cargo.toml")?;
+    if !cargo_config.exists() {
+        to_path(&cargo_config, &config).context("Failed writing sysroot Cargo.toml")?;
+    }
 
     Ok(())
 }
