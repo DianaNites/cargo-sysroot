@@ -18,7 +18,7 @@ edition = "2018"
 
 [dependencies]
 fs_extra = "1.2.0"
-structopt = "0.3.20"
+structopt = { version = "0.3.20", optional = true }
 cargo-toml2 = "1.3.2"
 anyhow = "1.0.34"
 
@@ -27,3 +27,11 @@ maintenance = { status = "experimental" }
 
 [package.metadata.cargo-sysroot]
 target = "x86_64-unknown-uefi"
+
+[features]
+default = ["structopt"]
+
+[[bin]]
+name = "cargo-sysroot"
+path = "src/main.rs"
+required-features = ["structopt"]
