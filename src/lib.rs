@@ -31,9 +31,6 @@ use std::{
     process::Command,
 };
 
-#[doc(hidden)]
-pub mod args;
-#[allow(dead_code)]
 mod util;
 
 /// The `Cargo.toml` for building the `alloc` crate.

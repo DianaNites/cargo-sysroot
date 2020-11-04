@@ -11,6 +11,7 @@ use cargo_toml2::{from_path, Build, CargoConfig, CargoToml};
 use std::{fs, io::prelude::*, path::Path};
 use structopt::StructOpt;
 
+mod args;
 #[allow(dead_code)]
 mod util;
 use crate::{args::*, util::get_rust_src};
