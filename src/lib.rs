@@ -121,27 +121,23 @@ fn generate_sysroot_cargo_toml(
             }
             deps
         }),
-        patch: None,
-        // FIXME: Is patch still needed? Doesn't seem to be in the alloc Cargo.toml,
-        // but I think it used to be?
-
-        // patch: Some(Patches {
-        //     sources: {
-        //         let mut sources = BTreeMap::new();
-        //         sources.insert("crates-io".into(), {
-        //             let mut x = BTreeMap::new();
-        //             x.insert(
-        //                 "rustc-std-workspace-core".to_string(),
-        //                 Dependency::Full(DependencyFull {
-        //                     path: Some(rust_src.join("rustc-std-workspace-core")),
-        //                     ..Default::default()
-        //                 }),
-        //             );
-        //             x
-        //         });
-        //         sources
-        //     },
-        // }),
+        patch: Some(Patches {
+            sources: {
+                let mut sources = BTreeMap::new();
+                sources.insert("crates-io".into(), {
+                    let mut x = BTreeMap::new();
+                    x.insert(
+                        "rustc-std-workspace-core".to_string(),
+                        Dependency::Full(DependencyFull {
+                            path: Some(rust_src.join("rustc-std-workspace-core")),
+                            ..Default::default()
+                        }),
+                    );
+                    x
+                });
+                sources
+            },
+        }),
         profile: {
             if let Some(manifest) = manifest {
                 let toml: CargoToml =
