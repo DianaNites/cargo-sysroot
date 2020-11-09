@@ -41,9 +41,19 @@ fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
         .to_string();
     let sysroot_dir = sysroot
         .canonicalize()
-        .context("Couldn't get canonical path to sysroot")?
+        .with_context(|| {
+            format!(
+                "Couldn't get canonical path to sysroot: {}",
+                sysroot.display()
+            )
+        })?
         .to_str()
-        .context("Failed to convert sysroot path to utf-8")?
+        .with_context(|| {
+            format!(
+                "Failed to convert sysroot path to utf-8: {}",
+                sysroot.display()
+            )
+        })?
         .to_string();
 
     let config = CargoConfig {
