@@ -36,23 +36,27 @@ mod util;
 
 /// The sysroot crates to build.
 ///
-/// See `generate_sysroot_cargo_toml`.
+/// See [`generate_sysroot_cargo_toml`].
 #[derive(Debug)]
 pub enum Sysroot {
     /// The core crate. Provides.. core functionality.
     Core,
 
     /// The alloc crate. Gives you a heap, and things to put on it.
+    ///
+    /// This implies [`Sysroot::Core`], and `compiler_builtins`.
     Alloc,
 
     /// The standard library. Gives you an operating system.
+    ///
+    /// This implies [`Sysroot::Alloc`], [`Sysroot::Core`], and
+    /// `compiler_builtins`.
     Std,
 }
 
 /// Generate a Cargo.toml for building the sysroot crates
 ///
-/// `build` specifies which sysroot crates to build.
-/// It is an error to specify the same crate twice.
+/// `build` specifies which sysroot crate to build.
 ///
 /// If `manifest` is provided, the sysroot crates will be built
 /// with the same profile overrides specified.
@@ -60,7 +64,7 @@ fn generate_sysroot_cargo_toml(
     manifest: Option<&Path>,
     sysroot_dir: &Path,
     rust_src: &Path,
-    build: &[Sysroot],
+    sysroot: Sysroot,
 ) -> Result<PathBuf> {
     fs::write(sysroot_dir.join("lib.rs"), "")?;
     let toml = CargoToml {
@@ -80,48 +84,39 @@ fn generate_sysroot_cargo_toml(
         }),
         dependencies: Some({
             let mut deps = BTreeMap::new();
-            for root in build {
-                match root {
-                    Sysroot::Core => {
-                        deps.insert(
-                            "core".into(),
-                            Dependency::Full(DependencyFull {
-                                path: Some(rust_src.join("core")),
-                                ..Default::default()
-                            }),
-                        )
-                        .context(
-                            "Incorrect API Usage: Duplicate sysroot crate `core` specified.",
-                        )?;
-                    }
+            match sysroot {
+                Sysroot::Core => {
+                    deps.insert(
+                        "core".into(),
+                        Dependency::Full(DependencyFull {
+                            path: Some(rust_src.join("core")),
+                            ..Default::default()
+                        }),
+                    );
+                }
 
-                    Sysroot::Alloc => {
-                        // TODO: Compiler-builtins features.
-                        // Both alloc and std support specifying them.
-                        deps.insert(
-                            "alloc".into(),
-                            Dependency::Full(DependencyFull {
-                                path: Some(rust_src.join("alloc")),
-                                ..Default::default()
-                            }),
-                        )
-                        .context(
-                            "Incorrect API Usage: Duplicate sysroot crate `alloc` specified.",
-                        )?;
-                    }
+                Sysroot::Alloc => {
+                    // TODO: Compiler-builtins features.
+                    // Both alloc and std support specifying them.
+                    deps.insert(
+                        "alloc".into(),
+                        Dependency::Full(DependencyFull {
+                            path: Some(rust_src.join("alloc")),
+                            ..Default::default()
+                        }),
+                    );
+                }
 
-                    Sysroot::Std => {
-                        // TODO: Compiler-builtins features.
-                        // Both alloc and std support specifying them.
-                        deps.insert(
-                            "std".into(),
-                            Dependency::Full(DependencyFull {
-                                path: Some(rust_src.join("std")),
-                                ..Default::default()
-                            }),
-                        )
-                        .context("Incorrect API Usage: Duplicate sysroot crate `std` specified.")?;
-                    }
+                Sysroot::Std => {
+                    // TODO: Compiler-builtins features.
+                    // Both alloc and std support specifying them.
+                    deps.insert(
+                        "std".into(),
+                        Dependency::Full(DependencyFull {
+                            path: Some(rust_src.join("std")),
+                            ..Default::default()
+                        }),
+                    );
                 }
             }
             deps
@@ -166,7 +161,7 @@ fn generate_sysroot_cargo_toml(
 /// The `Cargo.toml` for building the `alloc` crate.
 ///
 /// Returns the full path to the manifest
-fn generate_alloc_cargo_toml(
+fn _generate_alloc_cargo_toml(
     manifest: &Path,
     sysroot_dir: &Path,
     rust_src: &Path,
@@ -336,9 +331,14 @@ pub fn build_sysroot_with(
     fs::create_dir_all(sysroot).context("Couldn't create sysroot directory")?;
     fs::create_dir_all(artifact_dir(sysroot, target)?).context("Failed to setup sysroot")?;
 
-    let alloc_cargo_toml = generate_alloc_cargo_toml(manifest, sysroot, rust_src)
-        .context("Failed to generate sysroot Cargo.toml")?;
-    build_alloc(&alloc_cargo_toml, sysroot, target).context("Failed to build sysroot")?;
+    // let alloc_cargo_toml = generate_alloc_cargo_toml(manifest, sysroot, rust_src)
+    //     .context("Failed to generate sysroot Cargo.toml")?;
+    // build_alloc(&alloc_cargo_toml, sysroot, target).context("Failed to build
+    // sysroot")?;
+
+    let sysroot_cargo_toml =
+        generate_sysroot_cargo_toml(Some(manifest), sysroot, rust_src, Sysroot::Alloc)?;
+    build_alloc(&sysroot_cargo_toml, sysroot, target).context("Failed to build sysroot")?;
 
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
     // testing can work.
