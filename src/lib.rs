@@ -139,12 +139,13 @@ fn generate_sysroot_cargo_toml(
             },
         }),
         profile: {
-            if let Some(manifest) = manifest {
-                let toml: CargoToml =
-                    from_path(manifest).with_context(|| manifest.display().to_string())?;
-                toml.profile
-            } else {
-                None
+            match manifest {
+                Some(manifest) => {
+                    let toml: CargoToml =
+                        from_path(manifest).with_context(|| manifest.display().to_string())?;
+                    toml.profile
+                }
+                None => None,
             }
         },
         ..Default::default()
