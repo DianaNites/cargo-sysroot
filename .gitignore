@@ -1,4 +1,2 @@
 /target
-/.git*
 .cargo
-host.json
