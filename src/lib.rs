@@ -66,7 +66,10 @@ fn generate_sysroot_cargo_toml(
     rust_src: &Path,
     sysroot: Sysroot,
 ) -> Result<PathBuf> {
-    fs::write(sysroot_dir.join("lib.rs"), "")?;
+    fs::write(
+        sysroot_dir.join("lib.rs"),
+        "#![feature(no_core)]\n#![no_core]",
+    )?;
     let toml = CargoToml {
         package: Package {
             name: "Sysroot".into(),
