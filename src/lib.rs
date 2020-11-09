@@ -34,6 +34,135 @@ use std::{
 
 mod util;
 
+/// The sysroot crates to build.
+///
+/// See `generate_sysroot_cargo_toml`.
+#[derive(Debug)]
+pub enum Sysroot {
+    /// The core crate. Provides.. core functionality.
+    Core,
+
+    /// The alloc crate. Gives you a heap, and things to put on it.
+    Alloc,
+
+    /// The standard library. Gives you an operating system.
+    Std,
+}
+
+/// Generate a Cargo.toml for building the sysroot crates
+///
+/// `build` specifies which sysroot crates to build.
+/// It is an error to specify the same crate twice.
+///
+/// If `manifest` is provided, the sysroot crates will be built
+/// with the same profile overrides specified.
+fn generate_sysroot_cargo_toml(
+    manifest: Option<&Path>,
+    sysroot_dir: &Path,
+    rust_src: &Path,
+    build: &[Sysroot],
+) -> Result<PathBuf> {
+    fs::write(sysroot_dir.join("lib.rs"), "")?;
+    let toml = CargoToml {
+        package: Package {
+            name: "Sysroot".into(),
+            version: "0.0.0".into(),
+            authors: vec!["The Rust Project Developers".into(), "DianaNites".into()],
+            edition: Some("2018".into()),
+            autotests: Some(false),
+            autobenches: Some(false),
+            ..Default::default()
+        },
+        lib: Some(TargetConfig {
+            name: Some("sysroot".into()),
+            path: Some(sysroot_dir.join("lib.rs")),
+            ..Default::default()
+        }),
+        dependencies: Some({
+            let mut deps = BTreeMap::new();
+            for root in build {
+                match root {
+                    Sysroot::Core => {
+                        deps.insert(
+                            "core".into(),
+                            Dependency::Full(DependencyFull {
+                                path: Some(rust_src.join("core")),
+                                ..Default::default()
+                            }),
+                        )
+                        .context(
+                            "Incorrect API Usage: Duplicate sysroot crate `core` specified.",
+                        )?;
+                    }
+
+                    Sysroot::Alloc => {
+                        // TODO: Compiler-builtins features.
+                        // Both alloc and std support specifying them.
+                        deps.insert(
+                            "alloc".into(),
+                            Dependency::Full(DependencyFull {
+                                path: Some(rust_src.join("alloc")),
+                                ..Default::default()
+                            }),
+                        )
+                        .context(
+                            "Incorrect API Usage: Duplicate sysroot crate `alloc` specified.",
+                        )?;
+                    }
+
+                    Sysroot::Std => {
+                        // TODO: Compiler-builtins features.
+                        // Both alloc and std support specifying them.
+                        deps.insert(
+                            "std".into(),
+                            Dependency::Full(DependencyFull {
+                                path: Some(rust_src.join("std")),
+                                ..Default::default()
+                            }),
+                        )
+                        .context("Incorrect API Usage: Duplicate sysroot crate `std` specified.")?;
+                    }
+                }
+            }
+            deps
+        }),
+        patch: None,
+        // FIXME: Is patch still needed? Doesn't seem to be in the alloc Cargo.toml,
+        // but I think it used to be?
+
+        // patch: Some(Patches {
+        //     sources: {
+        //         let mut sources = BTreeMap::new();
+        //         sources.insert("crates-io".into(), {
+        //             let mut x = BTreeMap::new();
+        //             x.insert(
+        //                 "rustc-std-workspace-core".to_string(),
+        //                 Dependency::Full(DependencyFull {
+        //                     path: Some(rust_src.join("rustc-std-workspace-core")),
+        //                     ..Default::default()
+        //                 }),
+        //             );
+        //             x
+        //         });
+        //         sources
+        //     },
+        // }),
+        profile: {
+            if let Some(manifest) = manifest {
+                let toml: CargoToml =
+                    from_path(manifest).with_context(|| manifest.display().to_string())?;
+                toml.profile
+            } else {
+                None
+            }
+        },
+        ..Default::default()
+    };
+    let path = sysroot_dir.join("Cargo.toml");
+    to_path(&path, &toml).context("Failed writing sysroot Cargo.toml")?;
+    Ok(path)
+}
+
 /// The `Cargo.toml` for building the `alloc` crate.
 ///
 /// Returns the full path to the manifest
@@ -48,6 +177,8 @@ fn generate_alloc_cargo_toml(
             version: "0.0.0".into(),
             authors: vec!["The Rust Project Developers".into()],
             edition: Some("2018".into()),
+            autotests: Some(false),
+            autobenches: Some(false),
             ..Default::default()
         },
         lib: Some(TargetConfig {
