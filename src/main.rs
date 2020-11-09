@@ -125,6 +125,7 @@ fn main() -> Result<()> {
             .context("BUG: Somehow missing target triple")?,
         args.rust_src_dir.as_ref().unwrap(),
         cargo_sysroot::Sysroot::Alloc,
+        true,
     )?;
 
     Ok(())

@@ -62,6 +62,7 @@ fn generate_sysroot_cargo_toml(
     sysroot_dir: &Path,
     rust_src: &Path,
     sysroot: Sysroot,
+    compiler_builtins_mem: bool,
 ) -> Result<PathBuf> {
     fs::write(
         sysroot_dir.join("lib.rs"),
@@ -96,24 +97,30 @@ fn generate_sysroot_cargo_toml(
                 }
 
                 Sysroot::Alloc => {
-                    // TODO: Compiler-builtins features.
-                    // Both alloc and std support specifying them.
                     deps.insert(
                         "alloc".into(),
                         Dependency::Full(DependencyFull {
                             path: Some(rust_src.join("alloc")),
+                            features: if compiler_builtins_mem {
+                                Some(vec!["mem".into()])
+                            } else {
+                                None
+                            },
                             ..Default::default()
                         }),
                     );
                 }
 
                 Sysroot::Std => {
-                    // TODO: Compiler-builtins features.
-                    // Both alloc and std support specifying them.
                     deps.insert(
                         "std".into(),
                         Dependency::Full(DependencyFull {
                             path: Some(rust_src.join("std")),
+                            features: if compiler_builtins_mem {
+                                Some(vec!["mem".into()])
+                            } else {
+                                None
+                            },
                             ..Default::default()
                         }),
                     );
@@ -324,6 +331,10 @@ pub fn clean_artifacts(sysroot_dir: &Path) -> Result<()> {
 /// `sysroot_crate` specifies which sysroot crate to build.
 /// Only one option can be picked, because they imply each other.
 ///
+/// If `compiler_builtins_mem` is true, the `compiler_builtins`
+/// mem feature will be enabled.
+/// This only applies to [`Sysroot::Alloc`] and [`Sysroot::Std`].
+///
 /// You may want the simpler `build_sysroot`.
 pub fn build_sysroot_with(
     manifest: Option<&Path>,
@@ -331,12 +342,18 @@ pub fn build_sysroot_with(
     target: &Path,
     rust_src: &Path,
     sysroot_crate: Sysroot,
+    compiler_builtins_mem: bool,
 ) -> Result<PathBuf> {
     fs::create_dir_all(sysroot).context("Couldn't create sysroot directory")?;
     fs::create_dir_all(artifact_dir(sysroot, target)?).context("Failed to setup sysroot")?;
 
-    let sysroot_cargo_toml =
-        generate_sysroot_cargo_toml(manifest, sysroot, rust_src, sysroot_crate)?;
+    let sysroot_cargo_toml = generate_sysroot_cargo_toml(
+        manifest,
+        sysroot,
+        rust_src,
+        sysroot_crate,
+        compiler_builtins_mem,
+    )?;
     build_alloc(&sysroot_cargo_toml, sysroot, target).context("Failed to build sysroot")?;
 
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
@@ -382,5 +399,6 @@ pub fn build_sysroot() -> Result<PathBuf> {
         &target,
         &util::get_rust_src()?,
         Sysroot::Alloc,
+        true,
     )
 }
