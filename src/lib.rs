@@ -102,7 +102,7 @@ fn generate_sysroot_cargo_toml(
                         Dependency::Full(DependencyFull {
                             path: Some(rust_src.join("alloc")),
                             features: if compiler_builtins_mem {
-                                Some(vec!["mem".into()])
+                                Some(vec!["compiler-builtins-mem".into()])
                             } else {
                                 None
                             },
@@ -117,7 +117,7 @@ fn generate_sysroot_cargo_toml(
                         Dependency::Full(DependencyFull {
                             path: Some(rust_src.join("std")),
                             features: if compiler_builtins_mem {
-                                Some(vec!["mem".into()])
+                                Some(vec!["compiler-builtins-mem".into()])
                             } else {
                                 None
                             },
