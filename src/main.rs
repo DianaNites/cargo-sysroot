@@ -72,7 +72,6 @@ fn generate_cargo_config(target: &Path, sysroot: &Path) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    // TODO: Eat output if up to date.
     let Args::Sysroot(mut args) = Args::from_args();
     let toml: CargoToml =
         from_path(&args.manifest_path).with_context(|| args.manifest_path.display().to_string())?;

@@ -247,6 +247,7 @@ fn build_alloc(alloc_cargo_toml: &Path, sysroot_dir: &Path, target: &Path) -> Re
     let triple = target;
     let target_dir = sysroot_dir.join("target");
 
+    // TODO: Eat output if up to date? Always?
     let _exit = Command::new(env::var_os("CARGO").context("Couldn't find cargo command")?)
         .arg("rustc")
         .arg("--release")
