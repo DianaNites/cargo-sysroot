@@ -35,8 +35,6 @@ use std::{
 mod util;
 
 /// The sysroot crates to build.
-///
-/// See [`generate_sysroot_cargo_toml`].
 #[derive(Debug)]
 pub enum Sysroot {
     /// The core crate. Provides.. core functionality.
