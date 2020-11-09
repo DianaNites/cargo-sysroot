@@ -340,9 +340,12 @@ pub fn build_sysroot_with(
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
     // testing can work.
     util::copy_host_tools(sysroot).context("Couldn't copy host tools to sysroot")?;
-    Ok(sysroot
-        .canonicalize()
-        .context("Couldn't get canonical path to sysroot")?)
+    Ok(sysroot.canonicalize().with_context(|| {
+        format!(
+            "Couldn't get canonical path to sysroot: {}",
+            sysroot.display()
+        )
+    })?)
 }
 
 /// Build the Rust sysroot crates.
