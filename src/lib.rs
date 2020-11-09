@@ -302,7 +302,7 @@ pub fn artifact_dir(sysroot_dir: &Path, target: &Path) -> Result<PathBuf> {
 }
 
 /// Clean up generated sysroot artifacts.
-/// Should be called before `build_sysroot` if you want this behavior.
+/// Should be called before [`build_sysroot`] if you want this behavior.
 pub fn clean_artifacts(sysroot_dir: &Path) -> Result<()> {
     // Clean-up old artifacts
     match fs::remove_dir_all(sysroot_dir) {
