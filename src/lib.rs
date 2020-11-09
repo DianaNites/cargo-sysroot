@@ -35,6 +35,8 @@ use std::{
 mod util;
 
 /// The sysroot crates to build.
+///
+/// See [`build_sysroot_with`] for details.
 #[derive(Debug)]
 pub enum Sysroot {
     /// The core crate. Provides.. core functionality.
@@ -54,10 +56,7 @@ pub enum Sysroot {
 
 /// Generate a Cargo.toml for building the sysroot crates
 ///
-/// `build` specifies which sysroot crate to build.
-///
-/// If `manifest` is provided, the sysroot crates will be built
-/// with the same profile overrides specified.
+/// See [`build_sysroot_with`].
 fn generate_sysroot_cargo_toml(
     manifest: Option<&Path>,
     sysroot_dir: &Path,
@@ -319,23 +318,25 @@ pub fn clean_artifacts(sysroot_dir: &Path) -> Result<()> {
 ///
 /// `target` may be a path to a JSON Target Specification
 ///
+/// If `manifest` is provided, the sysroot crates will be built
+/// with any profile overrides specified in it.
+///
+/// `sysroot_crate` specifies which sysroot crate to build.
+/// Only one option can be picked, because they imply each other.
+///
 /// You may want the simpler `build_sysroot`.
 pub fn build_sysroot_with(
-    manifest: &Path,
+    manifest: Option<&Path>,
     sysroot: &Path,
     target: &Path,
     rust_src: &Path,
+    sysroot_crate: Sysroot,
 ) -> Result<PathBuf> {
     fs::create_dir_all(sysroot).context("Couldn't create sysroot directory")?;
     fs::create_dir_all(artifact_dir(sysroot, target)?).context("Failed to setup sysroot")?;
 
-    // let alloc_cargo_toml = generate_alloc_cargo_toml(manifest, sysroot, rust_src)
-    //     .context("Failed to generate sysroot Cargo.toml")?;
-    // build_alloc(&alloc_cargo_toml, sysroot, target).context("Failed to build
-    // sysroot")?;
-
     let sysroot_cargo_toml =
-        generate_sysroot_cargo_toml(Some(manifest), sysroot, rust_src, Sysroot::Alloc)?;
+        generate_sysroot_cargo_toml(manifest, sysroot, rust_src, sysroot_crate)?;
     build_alloc(&sysroot_cargo_toml, sysroot, target).context("Failed to build sysroot")?;
 
     // Copy host tools to the new sysroot, so that stuff like proc-macros and
@@ -358,6 +359,7 @@ pub fn build_sysroot_with(
 /// - `./target/sysroot` as the sysroot directory
 /// - `package.metadata.cargo-sysroot.target` as the target triple
 /// - The current rustup `rust_src` component.
+/// - [`Sysroot::Alloc`]
 pub fn build_sysroot() -> Result<PathBuf> {
     let sysroot = Path::new("target").join("sysroot");
     let manifest_path = Path::new("Cargo.toml");
@@ -374,5 +376,11 @@ pub fn build_sysroot() -> Result<PathBuf> {
         .as_str()
         .context("Cargo-sysroot target field was not a string")?
         .into();
-    build_sysroot_with(manifest_path, &sysroot, &target, &util::get_rust_src()?)
+    build_sysroot_with(
+        Some(manifest_path),
+        &sysroot,
+        &target,
+        &util::get_rust_src()?,
+        Sysroot::Alloc,
+    )
 }

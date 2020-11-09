@@ -118,12 +118,13 @@ fn main() -> Result<()> {
     }
 
     build_sysroot_with(
-        &args.manifest_path,
+        Some(&args.manifest_path),
         &args.sysroot_dir,
         args.target
             .as_ref()
             .context("BUG: Somehow missing target triple")?,
         args.rust_src_dir.as_ref().unwrap(),
+        cargo_sysroot::Sysroot::Alloc,
     )?;
 
     Ok(())
