@@ -378,6 +378,7 @@ pub fn build_sysroot_with(
 /// - `package.metadata.cargo-sysroot.target` as the target triple
 /// - The current rustup `rust_src` component.
 /// - [`Sysroot::Alloc`]
+/// - The `compiler_builtins_mem` feature enabled.
 pub fn build_sysroot() -> Result<PathBuf> {
     let sysroot = Path::new("target").join("sysroot");
     let manifest_path = Path::new("Cargo.toml");
