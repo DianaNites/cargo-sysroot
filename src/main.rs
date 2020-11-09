@@ -107,6 +107,7 @@ fn main() -> Result<()> {
     }
 
     clean_artifacts(&args.sysroot_dir)?;
+    fs::create_dir_all(&args.sysroot_dir).context("Couldn't create sysroot directory")?;
 
     let args = args;
 
