@@ -79,7 +79,7 @@ fn generate_sysroot_cargo_toml(
         },
         lib: Some(TargetConfig {
             name: Some("sysroot".into()),
-            path: Some(sysroot_dir.join("lib.rs")),
+            path: Some("lib.rs".into()),
             ..Default::default()
         }),
         dependencies: Some({
