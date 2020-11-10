@@ -42,6 +42,11 @@ pub enum Sysroot {
     /// The core crate. Provides.. core functionality.
     Core,
 
+    /// Compiler-builtins crate.
+    ///
+    /// This implies [`Sysroot::Core`].
+    CompilerBuiltins,
+
     /// The alloc crate. Gives you a heap, and things to put on it.
     ///
     /// This implies [`Sysroot::Core`], and `compiler_builtins`.
@@ -91,6 +96,23 @@ fn generate_sysroot_cargo_toml(
                         "core".into(),
                         Dependency::Full(DependencyFull {
                             path: Some(rust_src.join("core")),
+                            ..Default::default()
+                        }),
+                    );
+                }
+
+                Sysroot::CompilerBuiltins => {
+                    deps.insert(
+                        "core".into(),
+                        Dependency::Full(DependencyFull {
+                            path: Some(rust_src.join("core")),
+                            ..Default::default()
+                        }),
+                    );
+                    deps.insert(
+                        "compiler_builtins".into(),
+                        Dependency::Full(DependencyFull {
+                            version: Some("0.1".into()),
                             ..Default::default()
                         }),
                     );
