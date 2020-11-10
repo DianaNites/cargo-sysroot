@@ -103,16 +103,14 @@ fn generate_sysroot_cargo_toml(
 
                 Sysroot::CompilerBuiltins => {
                     deps.insert(
-                        "core".into(),
-                        Dependency::Full(DependencyFull {
-                            path: Some(rust_src.join("core")),
-                            ..Default::default()
-                        }),
-                    );
-                    deps.insert(
                         "compiler_builtins".into(),
                         Dependency::Full(DependencyFull {
                             version: Some("0.1".into()),
+                            features: Some(if compiler_builtins_mem {
+                                vec!["rustc-dep-of-std".into(), "mem".into()]
+                            } else {
+                                vec!["rustc-dep-of-std".into()]
+                            }),
                             ..Default::default()
                         }),
                     );
