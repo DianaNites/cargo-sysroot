@@ -6,7 +6,7 @@
 A simple tool to compile the sysroot crates for your no_std application, while using the standard cargo tools.
 
 This is not a wrapper like `cargo xbuild` or `xargo`, this is a standalone tool you call once beforehand.
-This has the nice benefit of actually working with standard tools like RLS, clippy,
+This has the nice benefit of actually working with standard tools like Rust Analyzer, clippy,
 or even the simple `cargo check`. It accomplishes this by generating a `.cargo/config` for you.
 
 ## Prerequisite
