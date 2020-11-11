@@ -1,18 +1,6 @@
 //! # Cargo-Sysroot
 //!
 //! Compiles the Rust sysroot crates, core, compiler_builtins, and alloc.
-//!
-//! Cargo.toml package.metadata.cargo-sysroot.target should be set
-//! to the path of a Target Specification
-//!
-//! The sysroot is located in `.target/sysroot`
-//!
-//! Build the Rust sysroot crates
-//!
-//! # Example
-//!
-//! ```rust
-//! ```
 use anyhow::*;
 use cargo_toml2::{
     from_path,
@@ -242,6 +230,8 @@ fn build_alloc(alloc_cargo_toml: &Path, sysroot_dir: &Path, target: &Path) -> Re
     Ok(())
 }
 
+/// The output artifact directory
+///
 /// Not part of the public API.
 #[doc(hidden)]
 pub fn artifact_dir(sysroot_dir: &Path, target: &Path) -> Result<PathBuf> {
@@ -253,6 +243,7 @@ pub fn artifact_dir(sysroot_dir: &Path, target: &Path) -> Result<PathBuf> {
 }
 
 /// Clean up generated sysroot artifacts.
+///
 /// Should be called before [`build_sysroot`] if you want this behavior.
 pub fn clean_artifacts(sysroot_dir: &Path) -> Result<()> {
     // Clean-up old artifacts
