@@ -22,6 +22,8 @@ use std::{
 
 mod util;
 
+pub use util::get_rust_src;
+
 /// The sysroot crates to build.
 ///
 /// See [`build_sysroot_with`] for details.

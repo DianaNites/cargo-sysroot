@@ -22,9 +22,10 @@ fn get_rustc_sysroot() -> Result<PathBuf> {
     Ok(sysroot)
 }
 
-/// Get the rust-src stuff
+/// Get the `rust-src` component of the current toolchain.
+///
+/// See <https://rust-lang.github.io/rustup/faq.html#can-rustup-download-the-rust-source-code>
 pub fn get_rust_src() -> Result<PathBuf> {
-    // See <https://github.com/rust-lang/rustup#can-rustup-download-the-rust-source-code>
     Ok(get_rustc_sysroot()?
         .join("lib")
         .join("rustlib")
