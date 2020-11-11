@@ -27,7 +27,7 @@ pub use util::get_rust_src;
 /// The sysroot crates to build.
 ///
 /// See [`build_sysroot_with`] for details.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Sysroot {
     /// The core crate. Provides.. core functionality.
     Core,
