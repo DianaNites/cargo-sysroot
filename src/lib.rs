@@ -150,6 +150,8 @@ fn generate_sysroot_cargo_toml(
         }),
         patch: Some(Patches {
             sources: if let Sysroot::Core = sysroot {
+                BTreeMap::new()
+            } else {
                 let mut sources = BTreeMap::new();
                 sources.insert("crates-io".into(), {
                     let mut x = BTreeMap::new();
@@ -163,8 +165,6 @@ fn generate_sysroot_cargo_toml(
                     x
                 });
                 sources
-            } else {
-                BTreeMap::new()
             },
         }),
         profile: {
