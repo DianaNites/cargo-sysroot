@@ -181,6 +181,7 @@ fn build_alloc(alloc_cargo_toml: &Path, sysroot_dir: &Path, target: &Path) -> Re
     let target_dir = sysroot_dir.join("target");
 
     // TODO: Eat output if up to date? Always? On error?
+    let exit = Command::new(env::var_os("CARGO").context("Couldn't find cargo command")?)
         .arg("rustc")
         .arg("--release")
         .arg("--target")
@@ -196,6 +197,14 @@ fn build_alloc(alloc_cargo_toml: &Path, sysroot_dir: &Path, target: &Path) -> Re
         .arg("force-unstable-if-unmarked")
         .status()
         .context("Build failed")?;
+    if !exit.success() {
+        return Err(anyhow!(
+            "Failed to build sysroot: Exit code {}",
+            exit.code()
+                .map(|i| i.to_string())
+                .unwrap_or_else(|| "Killed by signal".to_string())
+        ));
+    }
 
     // Copy artifacts to sysroot.
     for entry in fs::read_dir(
