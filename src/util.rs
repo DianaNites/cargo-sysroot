@@ -36,8 +36,9 @@ pub fn get_rust_src() -> Result<PathBuf> {
 
 /// Host tools such as rust-lld need to be in the sysroot to link correctly.
 /// Copies entire host target, so stuff like tests work.
+#[allow(clippy::blocks_in_if_conditions)]
 pub fn copy_host_tools(local_sysroot: &Path) -> Result<()> {
-    let mut root = get_rustc_sysroot()?;
+    let root = get_rustc_sysroot()?;
     let host = root
         .file_stem()
         .context("Couldn't get host sysroot")?
@@ -48,25 +49,41 @@ pub fn copy_host_tools(local_sysroot: &Path) -> Result<()> {
         .collect::<Vec<_>>()
         .join("-");
     let local_sysroot = local_sysroot.join("lib").join("rustlib").join(&host);
-    let src = {
-        root.push("lib");
-        root.push("rustlib");
-        root.push(&host);
-        root
-    };
-    let src_meta = fs::metadata(&src)?;
-    let to_meta = fs::metadata(&local_sysroot);
+    let src = root.join("lib").join("rustlib").join(&host);
+
+    let src_meta = fs::metadata(&src)
+        .with_context(|| format!("Couldn't get metadata for {}", src.display()))?;
+    let to_meta = fs::metadata(&local_sysroot)
+        .with_context(|| format!("Couldn't get metadata for {}", local_sysroot.display()));
+
     // If our host tools bin dir doesn't exist it always needs updating.
     if let Ok(to_meta) = to_meta {
         // If our sysroot is older than the installed component we need to update
         // A newer rust-src should always have a newer modified time.
         // Whereas we should always have a newer modified time if we're up to date.
-        if to_meta.modified().unwrap() > src_meta.modified().unwrap() {
+        if to_meta.modified().with_context(|| {
+            format!(
+                "Couldn't get modification time for {}",
+                local_sysroot.display()
+            )
+        })? > src_meta.modified().with_context(|| {
+            format!(
+                "Couldn't get modification time for {}",
+                local_sysroot.display()
+            )
+        })? {
             return Ok(());
         }
     }
     let mut options = CopyOptions::new();
     options.overwrite = true;
-    copy(src, local_sysroot.parent().unwrap(), &options)?;
+    let local_sysroot = local_sysroot.parent().unwrap();
+    copy(&src, &local_sysroot, &options).with_context(|| {
+        format!(
+            "Couldn't copy from `{}` to `{}`",
+            src.display(),
+            local_sysroot.display()
+        )
+    })?;
     Ok(())
 }
