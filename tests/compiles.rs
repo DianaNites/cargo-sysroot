@@ -11,7 +11,6 @@ fn all_compile() -> Result<()> {
         Sysroot::Alloc,
         // Sysroot::Std,
     ] {
-        eprintln!("Sysroot {:?}, path {}", sys, sysroot.display());
         let build_dir = tempfile::tempdir()?;
         let sysroot = build_sysroot_with(
             None,
@@ -24,6 +23,7 @@ fn all_compile() -> Result<()> {
             false,
         )
         .with_context(|| format!("Error compiling Sysroot: {:?}", sys))?;
+        eprintln!("Sysroot {:?}, path {}", sys, sysroot.display());
     }
     Ok(())
 }
