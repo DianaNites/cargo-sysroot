@@ -57,11 +57,9 @@ pub fn copy_host_tools(local_sysroot: &Path) -> Result<()> {
     let root = get_rustc_target_libdir(None)?;
     let host = root
         .parent()
-        .unwrap()
-        .file_stem()
-        .unwrap()
-        .to_str()
-        .unwrap();
+        .and_then(|f| f.file_stem())
+        .and_then(|f| f.to_str())
+        .context("Error parsing host target triple")?;
     let local_sysroot = local_sysroot.join("lib").join("rustlib").join(&host);
     let src = root;
 
@@ -91,7 +89,9 @@ pub fn copy_host_tools(local_sysroot: &Path) -> Result<()> {
     }
     let mut options = CopyOptions::new();
     options.overwrite = true;
-    let local_sysroot = local_sysroot.parent().unwrap();
+    let local_sysroot = local_sysroot
+        .parent()
+        .context("Error getting local sysroot parent directory")?;
     copy(&src, &local_sysroot, &options).with_context(|| {
         format!(
             "Couldn't copy from `{}` to `{}`",
