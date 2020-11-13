@@ -22,6 +22,22 @@ fn get_rustc_sysroot() -> Result<PathBuf> {
     Ok(sysroot)
 }
 
+/// Get the configured rustc sysroot lib dir for `target`.
+fn get_rustc_target_libdir(target: Option<&Path>) -> Result<PathBuf> {
+    let mut rustc = Command::new("rustc");
+    rustc.arg("--print").arg("target-libdir");
+    if let Some(target) = target {
+        rustc.arg("--target").arg(target);
+    }
+    let rustc = rustc.output()?;
+    let sysroot = PathBuf::from(
+        std::str::from_utf8(&rustc.stdout)
+            .context("Failed to convert sysroot path to utf-8")?
+            .trim(),
+    );
+    Ok(sysroot)
+}
+
 /// Get the `rust-src` component of the current toolchain.
 ///
 /// See <https://rust-lang.github.io/rustup/faq.html#can-rustup-download-the-rust-source-code>
@@ -38,18 +54,16 @@ pub fn get_rust_src() -> Result<PathBuf> {
 /// Copies entire host target, so stuff like tests work.
 #[allow(clippy::blocks_in_if_conditions)]
 pub fn copy_host_tools(local_sysroot: &Path) -> Result<()> {
-    let root = get_rustc_sysroot()?;
+    let root = get_rustc_target_libdir(None)?;
     let host = root
+        .parent()
+        .unwrap()
         .file_stem()
-        .context("Couldn't get host sysroot")?
+        .unwrap()
         .to_str()
-        .context("Invalid utf-8 in host sysroot path")?
-        .split('-')
-        .skip(1)
-        .collect::<Vec<_>>()
-        .join("-");
+        .unwrap();
     let local_sysroot = local_sysroot.join("lib").join("rustlib").join(&host);
-    let src = root.join("lib").join("rustlib").join(&host);
+    let src = root;
 
     let src_meta = fs::metadata(&src)
         .with_context(|| format!("Couldn't get metadata for {}", src.display()))?;
