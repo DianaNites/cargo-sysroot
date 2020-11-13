@@ -11,6 +11,7 @@ use cargo_toml2::{
     Package,
     Patches,
     TargetConfig,
+    Workspace,
 };
 use std::{
     collections::BTreeMap,
@@ -78,6 +79,7 @@ fn generate_sysroot_cargo_toml(
             path: Some("lib.rs".into()),
             ..Default::default()
         }),
+        workspace: Some(Workspace::default()),
         dependencies: Some({
             let mut deps = BTreeMap::new();
             match sysroot {
