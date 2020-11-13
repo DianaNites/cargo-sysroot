@@ -40,14 +40,29 @@ fn get_rustc_target_libdir(target: Option<&Path>) -> Result<PathBuf> {
 
 /// Get the `rust-src` component of the current toolchain.
 ///
+/// Errors if current toolchain isn't a nightly.
+///
 /// See <https://rust-lang.github.io/rustup/faq.html#can-rustup-download-the-rust-source-code>
 pub fn get_rust_src() -> Result<PathBuf> {
-    Ok(get_rustc_sysroot()?
+    let root = get_rustc_sysroot()?;
+    let sys = root
         .join("lib")
         .join("rustlib")
         .join("src")
         .join("rust")
-        .join("library"))
+        .join("library");
+    if root
+        .file_stem()
+        .and_then(|f| f.to_str())
+        .and_then(|s| s.split('-').next())
+        .context("Error parsing rust-src path")?
+        != "nightly"
+    {
+        return Err(anyhow!(
+            "A nightly Rust version is required to build the sysroot"
+        ));
+    }
+    Ok(sys)
 }
 
 /// Host tools such as rust-lld need to be in the sysroot to link correctly.
