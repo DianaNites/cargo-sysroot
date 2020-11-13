@@ -293,6 +293,9 @@ pub fn build_sysroot_with(
 ) -> Result<PathBuf> {
     fs::create_dir_all(sysroot).context("Couldn't create sysroot directory")?;
     fs::create_dir_all(artifact_dir(sysroot, target)?).context("Failed to setup sysroot")?;
+    if !rust_src.exists() {
+        return Err(anyhow!("Rust-src component not installed"));
+    }
 
     let sysroot_cargo_toml = generate_sysroot_cargo_toml(
         manifest,
