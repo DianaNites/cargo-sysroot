@@ -90,7 +90,7 @@ pub enum Features {
 ///
 /// See the individual methods for more details on what this means
 /// and what defaults exist.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SysrootBuilder {
     /// Manifest to use for cargo profiles
     manifest: Option<PathBuf>,
@@ -205,7 +205,7 @@ impl SysrootBuilder {
         self
     }
 
-    /// Build the Sysroot
+    /// Build the Sysroot, and return a path suitable to pass to rustc.
     ///
     /// # Errors
     ///
@@ -214,7 +214,7 @@ impl SysrootBuilder {
     /// - If `target` is a JSON specification, but doesn't exist.
     /// - If the `rust_src` directory does not exist, or could not be detected.
     /// - If the sysroot cannot be setup, or fails to compile
-    pub fn build(&self) -> Result<()> {
+    pub fn build(&self) -> Result<PathBuf> {
         let target = match &self.target {
             Some(t) => t,
             None => return Err(anyhow!("SysrootBuilder::target was not called")),
@@ -237,7 +237,7 @@ impl SysrootBuilder {
                 ));
             }
         }
-        let _rust_src = match &self.rust_src {
+        let rust_src = match &self.rust_src {
             Some(s) => {
                 if !s.exists() {
                     return Err(anyhow!(
@@ -247,27 +247,45 @@ impl SysrootBuilder {
                 }
                 s.clone()
             }
-            None => util::get_rust_src().context("Could not detect appropriate rust-src")?,
+            None => {
+                let src = util::get_rust_src().context("Could not detect appropriate rust-src")?;
+                if !src.exists() {
+                    return Err(anyhow!("Rust-src component not installed?"));
+                }
+                src
+            }
         };
         fs::create_dir_all(&self.output).context("Couldn't create sysroot output directory")?;
         fs::create_dir_all(artifact_dir(&self.output, target)?)
             .context("Failed to setup sysroot directory structure")?;
-        Ok(())
+
+        let sysroot_cargo_toml = generate_sysroot_cargo_toml(&SysrootBuilder {
+            // HACK: So it can see auto-detected rust-src.
+            rust_src: Some(rust_src),
+            ..self.clone()
+        })?;
+        build_alloc(&sysroot_cargo_toml, &self).context("Failed to build sysroot")?;
+
+        // Copy host tools to the new sysroot, so that stuff like proc-macros and
+        // testing can work.
+        util::copy_host_tools(&self.output).context("Couldn't copy host tools to sysroot")?;
+        Ok(self.output.canonicalize().with_context(|| {
+            format!(
+                "Couldn't get canonical path to sysroot: {}",
+                self.output.display()
+            )
+        })?)
     }
 }
 
 /// Generate a Cargo.toml for building the sysroot crates
 ///
+/// Should ONLY be called by [`SysrootBuilder::build`].
+///
 /// See [`build_sysroot_with`].
-fn generate_sysroot_cargo_toml(
-    manifest: Option<&Path>,
-    sysroot_dir: &Path,
-    rust_src: &Path,
-    sysroot: Sysroot,
-    compiler_builtins_mem: bool,
-) -> Result<PathBuf> {
+fn generate_sysroot_cargo_toml(builder: &SysrootBuilder) -> Result<PathBuf> {
     fs::write(
-        sysroot_dir.join("lib.rs"),
+        builder.output.join("lib.rs"),
         "#![feature(no_core)]\n#![no_core]",
     )?;
     let toml = CargoToml {
@@ -288,12 +306,12 @@ fn generate_sysroot_cargo_toml(
         workspace: Some(Workspace::default()),
         dependencies: Some({
             let mut deps = BTreeMap::new();
-            match sysroot {
+            match builder.sysroot_crate {
                 Sysroot::Core => {
                     deps.insert(
                         "core".into(),
                         Dependency::Full(DependencyFull {
-                            path: Some(rust_src.join("core")),
+                            path: Some(builder.rust_src.as_ref().unwrap().join("core")),
                             ..Default::default()
                         }),
                     );
@@ -304,11 +322,13 @@ fn generate_sysroot_cargo_toml(
                         "compiler_builtins".into(),
                         Dependency::Full(DependencyFull {
                             version: Some("0.1".into()),
-                            features: Some(if compiler_builtins_mem {
-                                vec!["rustc-dep-of-std".into(), "mem".into()]
-                            } else {
-                                vec!["rustc-dep-of-std".into()]
-                            }),
+                            features: {
+                                let mut f = vec!["rustc-dep-of-std".into()];
+                                if builder.features.contains(&Features::CompilerBuiltinsMem) {
+                                    f.push("mem".into());
+                                }
+                                Some(f)
+                            },
                             ..Default::default()
                         }),
                     );
@@ -318,8 +338,8 @@ fn generate_sysroot_cargo_toml(
                     deps.insert(
                         "alloc".into(),
                         Dependency::Full(DependencyFull {
-                            path: Some(rust_src.join("alloc")),
-                            features: if compiler_builtins_mem {
+                            path: Some(builder.rust_src.as_ref().unwrap().join("alloc")),
+                            features: if builder.features.contains(&Features::CompilerBuiltinsMem) {
                                 Some(vec!["compiler-builtins-mem".into()])
                             } else {
                                 None
@@ -333,8 +353,8 @@ fn generate_sysroot_cargo_toml(
                     deps.insert(
                         "std".into(),
                         Dependency::Full(DependencyFull {
-                            path: Some(rust_src.join("std")),
-                            features: if compiler_builtins_mem {
+                            path: Some(builder.rust_src.as_ref().unwrap().join("std")),
+                            features: if builder.features.contains(&Features::CompilerBuiltinsMem) {
                                 Some(vec!["compiler-builtins-mem".into()])
                             } else {
                                 None
@@ -347,7 +367,7 @@ fn generate_sysroot_cargo_toml(
             deps
         }),
         patch: Some(Patches {
-            sources: if let Sysroot::Core = sysroot {
+            sources: if let Sysroot::Core = builder.sysroot_crate {
                 BTreeMap::new()
             } else {
                 let mut sources = BTreeMap::new();
@@ -356,7 +376,13 @@ fn generate_sysroot_cargo_toml(
                     x.insert(
                         "rustc-std-workspace-core".to_string(),
                         Dependency::Full(DependencyFull {
-                            path: Some(rust_src.join("rustc-std-workspace-core")),
+                            path: Some(
+                                builder
+                                    .rust_src
+                                    .as_ref()
+                                    .unwrap()
+                                    .join("rustc-std-workspace-core"),
+                            ),
                             ..Default::default()
                         }),
                     );
@@ -366,7 +392,7 @@ fn generate_sysroot_cargo_toml(
             },
         }),
         profile: {
-            match manifest {
+            match &builder.manifest {
                 Some(manifest) => {
                     let toml: CargoToml =
                         from_path(manifest).with_context(|| manifest.display().to_string())?;
@@ -377,16 +403,18 @@ fn generate_sysroot_cargo_toml(
         },
         ..Default::default()
     };
-    let path = sysroot_dir.join("Cargo.toml");
+    let path = builder.output.join("Cargo.toml");
     to_path(&path, &toml).context("Failed writing sysroot Cargo.toml")?;
     Ok(path)
 }
 
 /// The entry-point for building the alloc crate, which builds all the others
-fn build_alloc(alloc_cargo_toml: &Path, sysroot_dir: &Path, target: &Path) -> Result<()> {
+///
+/// Should ONLY be called by [`SysrootBuilder::build`].
+fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> {
     let path = alloc_cargo_toml;
-    let triple = target;
-    let target_dir = sysroot_dir.join("target");
+    let triple = builder.target.as_ref().unwrap();
+    let target_dir = builder.output.join("target");
 
     // TODO: Eat output if up to date? Always? On error?
     let exit = Command::new(env::var_os("CARGO").context("Couldn't find cargo command")?)
@@ -403,6 +431,7 @@ fn build_alloc(alloc_cargo_toml: &Path, sysroot_dir: &Path, target: &Path) -> Re
         .arg("-Z")
         // The rust build system only passes this for rustc? xbuild passes this for alloc. 🤷‍♀️
         .arg("force-unstable-if-unmarked")
+        .args(&builder.rustc_flags)
         .status()
         .context("Build failed")?;
     if !exit.success() {
@@ -434,7 +463,7 @@ fn build_alloc(alloc_cargo_toml: &Path, sysroot_dir: &Path, target: &Path) -> Re
             .map_err(|e| Error::msg(e.to_string_lossy().to_string()))
             .context("Invalid Unicode in path")?;
         if name.starts_with("lib") {
-            let out = artifact_dir(sysroot_dir, target)?.join(name);
+            let out = artifact_dir(&builder.output, &triple)?.join(name);
             fs::copy(entry.path(), &out).with_context(|| {
                 format!(
                     "Copying sysroot artifact from {} to {} failed",
@@ -489,6 +518,7 @@ pub fn clean_artifacts(sysroot_dir: &Path) -> Result<()> {
 /// This only applies to [`Sysroot::Alloc`] and [`Sysroot::Std`].
 ///
 /// You may want the simpler `build_sysroot`.
+#[deprecated = "Use [`SysrootBuilder`](./struct.SysrootBuilder.html) instead"]
 pub fn build_sysroot_with(
     manifest: Option<&Path>,
     sysroot: &Path,
@@ -497,30 +527,19 @@ pub fn build_sysroot_with(
     sysroot_crate: Sysroot,
     compiler_builtins_mem: bool,
 ) -> Result<PathBuf> {
-    fs::create_dir_all(sysroot).context("Couldn't create sysroot directory")?;
-    fs::create_dir_all(artifact_dir(sysroot, target)?).context("Failed to setup sysroot")?;
-    if !rust_src.exists() {
-        return Err(anyhow!("Rust-src component not installed"));
+    let mut sys = SysrootBuilder::new(sysroot_crate);
+    if let Some(manifest) = manifest {
+        sys.manifest(manifest.into());
     }
-
-    let sysroot_cargo_toml = generate_sysroot_cargo_toml(
-        manifest,
-        sysroot,
-        rust_src,
-        sysroot_crate,
-        compiler_builtins_mem,
-    )?;
-    build_alloc(&sysroot_cargo_toml, sysroot, target).context("Failed to build sysroot")?;
-
-    // Copy host tools to the new sysroot, so that stuff like proc-macros and
-    // testing can work.
-    util::copy_host_tools(sysroot).context("Couldn't copy host tools to sysroot")?;
-    Ok(sysroot.canonicalize().with_context(|| {
-        format!(
-            "Couldn't get canonical path to sysroot: {}",
-            sysroot.display()
-        )
-    })?)
+    sys.target(target.into())
+        .output(sysroot.into())
+        .rust_src(rust_src.into())
+        .features(if compiler_builtins_mem {
+            &[Features::CompilerBuiltinsMem]
+        } else {
+            &[]
+        });
+    sys.build()
 }
 
 /// Build the Rust sysroot crates.
@@ -534,6 +553,7 @@ pub fn build_sysroot_with(
 /// - The current rustup `rust_src` component.
 /// - [`Sysroot::Alloc`]
 /// - The `compiler_builtins_mem` feature enabled.
+#[deprecated = "Use [`SysrootBuilder`](./struct.SysrootBuilder.html) instead"]
 pub fn build_sysroot() -> Result<PathBuf> {
     let sysroot = Path::new("target").join("sysroot");
     let manifest_path = Path::new("Cargo.toml");
@@ -550,6 +570,7 @@ pub fn build_sysroot() -> Result<PathBuf> {
         .as_str()
         .context("Cargo-sysroot target field was not a string")?
         .into();
+    #[allow(deprecated)]
     build_sysroot_with(
         Some(manifest_path),
         &sysroot,
