@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
-use cargo_sysroot::{build_sysroot_with, get_rust_src, Sysroot};
-use std::path::Path;
+use cargo_sysroot::{Sysroot, SysrootBuilder};
 
 /// Test that all targets compile as expected.
 #[test]
@@ -12,17 +11,13 @@ fn all_compile() -> Result<()> {
         // Sysroot::Std,
     ] {
         let build_dir = tempfile::tempdir()?;
-        let sysroot = build_sysroot_with(
-            None,
-            build_dir.path(),
-            // Path::new("x86_64-unknown-uefi"),
-            Path::new("x86_64-unknown-linux-gnu"),
-            // Path::new("spirv-unknown-unknown"),
-            &get_rust_src()?,
-            *sys,
-            false,
-        )
-        .with_context(|| format!("Error compiling Sysroot: {:?}", sys))?;
+        let sysroot = SysrootBuilder::new(*sys)
+            .output(build_dir.path().into())
+            // .target("x86_64-unknown-uefi".into())
+            .target("x86_64-unknown-linux-gnu".into())
+            // .target("spirv-unknown-unknown".into())
+            .build()
+            .with_context(|| format!("Error compiling Sysroot: {:?}", sys))?;
         eprintln!("Sysroot {:?}, path {}", sys, sysroot.display());
     }
     Ok(())

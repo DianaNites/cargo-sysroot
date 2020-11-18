@@ -116,16 +116,15 @@ fn main() -> Result<()> {
             .context("Couldn't create .cargo/config.toml")?;
     }
 
-    build_sysroot_with(
-        Some(&args.manifest_path),
-        &args.sysroot_dir,
-        args.target
-            .as_ref()
-            .context("BUG: Somehow missing target triple")?,
-        args.rust_src_dir.as_ref().unwrap(),
-        cargo_sysroot::Sysroot::Alloc,
-        true,
-    )?;
+    let mut sys = SysrootBuilder::new(cargo_sysroot::Sysroot::Alloc);
+    sys.manifest(args.manifest_path)
+        .output(args.sysroot_dir)
+        .target(args.target.expect("BUG: Missing target triple?"))
+        .features(&[Features::CompilerBuiltinsMem]);
+    if let Some(rust_src) = args.rust_src_dir {
+        sys.rust_src(rust_src);
+    }
+    sys.build()?;
 
     Ok(())
 }
