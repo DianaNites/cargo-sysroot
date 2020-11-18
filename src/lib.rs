@@ -30,7 +30,11 @@ pub use util::get_rust_src;
 /// See [`build_sysroot_with`] for details.
 #[derive(Debug, Copy, Clone)]
 pub enum Sysroot {
-    /// The core crate. Provides.. core functionality.
+    /// The core crate. Provides core functionality.
+    ///
+    /// This does **not** include [`Sysroot::CompilerBuiltins`],
+    /// which is what you probably want unless your target
+    /// needs special handling.
     Core,
 
     /// Compiler-builtins crate.
@@ -40,14 +44,60 @@ pub enum Sysroot {
 
     /// The alloc crate. Gives you a heap, and things to put on it.
     ///
-    /// This implies [`Sysroot::Core`], and `compiler_builtins`.
+    /// This implies [`Sysroot::Core`], and [`Sysroot::CompilerBuiltins`].
     Alloc,
 
     /// The standard library. Gives you an operating system.
     ///
     /// This implies [`Sysroot::Alloc`], [`Sysroot::Core`], and
-    /// `compiler_builtins`.
+    /// [`Sysroot::CompilerBuiltins`].
     Std,
+}
+
+/// A builder interface for constructing the Sysroot
+///
+/// See the individual methods for more details on what this means
+/// and what defaults exist.
+#[derive(Debug)]
+pub struct SysrootBuilder {
+    manifest: Option<PathBuf>,
+    sysroot: Option<PathBuf>,
+    target: Option<PathBuf>,
+    rust_src: Option<PathBuf>,
+    sysroot_crate: Sysroot,
+    compiler_builtins_mem: bool,
+}
+
+impl SysrootBuilder {
+    /// New [`SysrootBuilder`].
+    ///
+    /// `sysroot_crate` specifies which libraries to build as part of
+    /// the sysroot. See [`Sysroot`] for more details.
+    pub fn new(sysroot_crate: Sysroot) -> Self {
+        Self {
+            manifest: Default::default(),
+            sysroot: Default::default(),
+            target: Default::default(),
+            rust_src: Default::default(),
+            sysroot_crate,
+            compiler_builtins_mem: Default::default(),
+        }
+    }
+
+    /// Set path to the `Cargo.toml` of the project requiring a custom sysroot.
+    ///
+    /// If provided, any [Cargo Profile's][1] in the provided manifest
+    /// will be copied into the sysroot crate being compiled.
+    ///
+    /// If not provided, profiles use their default settings.
+    ///
+    /// By default this will be `None`.
+    ///
+    /// [1]: https://doc.rust-lang.org/stable/cargo/reference/profiles.html
+    pub fn manifest(&mut self, manifest: Option<PathBuf>) -> &mut Self {
+        self.manifest = manifest;
+        self
+    }
 }
 
 /// Generate a Cargo.toml for building the sysroot crates
