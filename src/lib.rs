@@ -96,7 +96,7 @@ pub struct SysrootBuilder {
     manifest: Option<PathBuf>,
 
     /// Output directory, where the built sysroot will be anchored.
-    output: Option<PathBuf>,
+    output: PathBuf,
 
     /// Target triple/json to build for
     target: Option<PathBuf>,
@@ -122,8 +122,9 @@ impl SysrootBuilder {
     pub fn new(sysroot_crate: Sysroot) -> Self {
         Self {
             manifest: Default::default(),
-            output: Default::default(),
+            output: PathBuf::from(".").join("target").join("sysroot"),
             target: Default::default(),
+            // Set in [`SysrootBuilder::build`] since `new` can't error.
             rust_src: Default::default(),
             sysroot_crate,
             features: Vec::with_capacity(3),
@@ -150,7 +151,7 @@ impl SysrootBuilder {
     ///
     /// By default this is `./target/sysroot`.
     pub fn output(&mut self, output: PathBuf) -> &mut Self {
-        self.output = Some(output);
+        self.output = output;
         self
     }
 
@@ -158,8 +159,7 @@ impl SysrootBuilder {
     /// or a [JSON Target Specification][1].
     ///
     /// By default this is `None`, and if not set when
-    /// [`SysrootBuilder::build`] is called, will cause an
-    /// TODO: Error? Panic?
+    /// [`SysrootBuilder::build`] is called, will cause an error.
     ///
     /// [1]: https://doc.rust-lang.org/rustc/targets/custom.html
     pub fn target(&mut self, target: PathBuf) -> &mut Self {
@@ -180,6 +180,8 @@ impl SysrootBuilder {
     ///
     /// This *adds* to, not *replaces*, any previous calls to this method.
     ///
+    /// By default this is empty.
+    ///
     /// See [`Features`] for details.
     pub fn features(&mut self, features: &[Features]) -> &mut Self {
         self.features.extend_from_slice(features);
@@ -192,6 +194,8 @@ impl SysrootBuilder {
     /// Custom flags to pass to `rustc` compiler invocations.
     ///
     /// This *adds* to, not *replaces*, any previous calls to this method.
+    ///
+    /// By default this is empty.
     pub fn rustc_flags<I, S>(&mut self, flags: I) -> &mut Self
     where
         I: IntoIterator<Item = S>,
@@ -205,10 +209,49 @@ impl SysrootBuilder {
     ///
     /// # Errors
     ///
-    /// - If the sysroot fails to compile
-    /// - If the `rust_src` directory does not exist
+    /// - [`SysrootBuilder::target`] was not called
     /// - If `manifest` is provided and does not exist
+    /// - If `target` is a JSON specification, but doesn't exist.
+    /// - If the `rust_src` directory does not exist, or could not be detected.
+    /// - If the sysroot cannot be setup, or fails to compile
     pub fn build(&self) -> Result<()> {
+        let target = match &self.target {
+            Some(t) => t,
+            None => return Err(anyhow!("SysrootBuilder::target was not called")),
+        };
+        if let Some(manifest) = &self.manifest {
+            if !manifest.exists() {
+                return Err(anyhow!(
+                    "Provided manifest did not exist. Path: {}",
+                    manifest.display()
+                ));
+            }
+        }
+        // If `target` has an extension, assume target spec...
+        if target.extension().is_some() {
+            // ...and check if it exists.
+            if !target.exists() {
+                return Err(anyhow!(
+                    "Provided JSON Target Specification did not exist: {}",
+                    target.display()
+                ));
+            }
+        }
+        let _rust_src = match &self.rust_src {
+            Some(s) => {
+                if !s.exists() {
+                    return Err(anyhow!(
+                        "The provided rust-src directory did not exist: {}",
+                        s.display()
+                    ));
+                }
+                s.clone()
+            }
+            None => util::get_rust_src().context("Could not detect appropriate rust-src")?,
+        };
+        fs::create_dir_all(&self.output).context("Couldn't create sysroot output directory")?;
+        fs::create_dir_all(artifact_dir(&self.output, target)?)
+            .context("Failed to setup sysroot directory structure")?;
         Ok(())
     }
 }
