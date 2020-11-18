@@ -16,6 +16,7 @@ use cargo_toml2::{
 use std::{
     collections::BTreeMap,
     env,
+    ffi::OsString,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -54,18 +55,63 @@ pub enum Sysroot {
     Std,
 }
 
+/// Features to enable when building the sysroot crates
+///
+/// See [`SysrootBuilder::features`] for usage.
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq)]
+pub enum Features {
+    /// This enables the `mem` feature of [`compiler_builtins`][1],
+    /// which will provide memory related intrinsics such as `memcpy`.
+    ///
+    /// [1]: https://github.com/rust-lang/compiler-builtins
+    CompilerBuiltinsMem,
+
+    /// This enables the `c` feature of [`compiler_builtins`][1],
+    /// which enables compilation of `C` code and may result in more
+    /// optimized implementations, and fills in the rare unimplemented
+    /// intrinsics.
+    ///
+    /// [1]: https://github.com/rust-lang/compiler-builtins
+    CompilerBuiltinsC,
+
+    /// This enables the `no-asm` feature of [`compiler_builtins`][1],
+    /// which disables any implementations which use
+    /// inline assembly and fall back to pure Rust versions (if available).
+    ///
+    /// [1]: https://github.com/rust-lang/compiler-builtins
+    // TODO: Would only work on the [`Sysroot::CompilerBuiltins`] target,
+    // as it's not exported through alloc, but could be forced by
+    // adding compiler_builtins as an explicit dependency and enabling it,
+    // relying on features collapsing.
+    CompilerBuiltinsNoAsm,
+}
+
 /// A builder interface for constructing the Sysroot
 ///
 /// See the individual methods for more details on what this means
 /// and what defaults exist.
 #[derive(Debug)]
 pub struct SysrootBuilder {
+    /// Manifest to use for cargo profiles
     manifest: Option<PathBuf>,
-    sysroot: Option<PathBuf>,
+
+    /// Output directory, where the built sysroot will be anchored.
+    output: Option<PathBuf>,
+
+    /// Target triple/json to build for
     target: Option<PathBuf>,
+
+    /// The rust sources to use
     rust_src: Option<PathBuf>,
+
+    /// Which crates to include in the sysroot
     sysroot_crate: Sysroot,
-    compiler_builtins_mem: bool,
+
+    /// What custom features to enable, if any. See [`Features`] for details.
+    features: Vec<Features>,
+
+    /// Custom flags to pass to rustc.
+    rustc_flags: Vec<OsString>,
 }
 
 impl SysrootBuilder {
@@ -76,11 +122,12 @@ impl SysrootBuilder {
     pub fn new(sysroot_crate: Sysroot) -> Self {
         Self {
             manifest: Default::default(),
-            sysroot: Default::default(),
+            output: Default::default(),
             target: Default::default(),
             rust_src: Default::default(),
             sysroot_crate,
-            compiler_builtins_mem: Default::default(),
+            features: Vec::with_capacity(3),
+            rustc_flags: Default::default(),
         }
     }
 
@@ -94,9 +141,75 @@ impl SysrootBuilder {
     /// By default this will be `None`.
     ///
     /// [1]: https://doc.rust-lang.org/stable/cargo/reference/profiles.html
-    pub fn manifest(&mut self, manifest: Option<PathBuf>) -> &mut Self {
-        self.manifest = manifest;
+    pub fn manifest(&mut self, manifest: PathBuf) -> &mut Self {
+        self.manifest = Some(manifest);
         self
+    }
+
+    /// Set where the sysroot directory will be placed.
+    ///
+    /// By default this is `./target/sysroot`.
+    pub fn output(&mut self, output: PathBuf) -> &mut Self {
+        self.output = Some(output);
+        self
+    }
+
+    /// The target to compile *for*. This can be a target-triple,
+    /// or a [JSON Target Specification][1].
+    ///
+    /// By default this is `None`, and if not set when
+    /// [`SysrootBuilder::build`] is called, will cause an
+    /// TODO: Error? Panic?
+    ///
+    /// [1]: https://doc.rust-lang.org/rustc/targets/custom.html
+    pub fn target(&mut self, target: PathBuf) -> &mut Self {
+        self.target = Some(target);
+        self
+    }
+
+    /// The rust source directory. These are used to compile the sysroot.
+    ///
+    /// By default this uses the `rust-src` component from the
+    /// current `rustup` toolchain.
+    pub fn rust_src(&mut self, rust_src: PathBuf) -> &mut Self {
+        self.rust_src = Some(rust_src);
+        self
+    }
+
+    /// Which features to enable.
+    ///
+    /// This *adds* to, not *replaces*, any previous calls to this method.
+    ///
+    /// See [`Features`] for details.
+    pub fn features(&mut self, features: &[Features]) -> &mut Self {
+        self.features.extend_from_slice(features);
+        // TODO: Should?? Not??
+        self.features.sort_unstable();
+        self.features.dedup();
+        self
+    }
+
+    /// Custom flags to pass to `rustc` compiler invocations.
+    ///
+    /// This *adds* to, not *replaces*, any previous calls to this method.
+    pub fn rustc_flags<I, S>(&mut self, flags: I) -> &mut Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<OsString>,
+    {
+        self.rustc_flags.extend(flags.into_iter().map(Into::into));
+        self
+    }
+
+    /// Build the Sysroot
+    ///
+    /// # Errors
+    ///
+    /// - If the sysroot fails to compile
+    /// - If the `rust_src` directory does not exist
+    /// - If `manifest` is provided and does not exist
+    pub fn build(&self) -> Result<()> {
+        Ok(())
     }
 }
 
