@@ -438,8 +438,13 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
         .arg("--") // Pass to rustc directly.
         .arg("-Z")
         // The rust build system only passes this for rustc? xbuild passes this for alloc. 🤷‍♀️
-        .arg("force-unstable-if-unmarked")
+        // .arg("force-unstable-if-unmarked")
         .env("RUSTFLAGS", {
+            // let mut env = OsString::from("-C embed-bitcode=yes -Z
+            // force-unstable-if-unmarked");
+
+            // WHY DOES THIS FAIL WITH error: unknown debugging option: `-C`
+            // WHY DOES IT NOT ON MY TERMINAL?!
             let mut env = OsString::from("-Cembed-bitcode=yes");
             if let Some(exist) = std::env::var_os("RUSTFLAGS") {
                 env.push(" ");
@@ -449,6 +454,7 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
                 env.push(" ");
                 env.push(flag)
             }
+            dbg!(&env);
             env
         })
         .status()
