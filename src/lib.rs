@@ -451,7 +451,7 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
             env
         })
         .status()
-        .context("Build failed")?;
+        .context("Couldn't find/run cargo command")?;
     if !exit.success() {
         return Err(anyhow!(
             "Failed to build sysroot: Exit code {}",
