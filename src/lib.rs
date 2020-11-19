@@ -440,8 +440,9 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
         // The rust build system only passes this for rustc? xbuild passes this for alloc. 🤷‍♀️
         .arg("force-unstable-if-unmarked")
         .env("RUSTFLAGS", {
-            let mut env = OsString::new();
+            let mut env = OsString::from("-Cembed-bitcode=yes");
             if let Some(exist) = std::env::var_os("RUSTFLAGS") {
+                env.push(" ");
                 env.push(exist);
             }
             for flag in &builder.rustc_flags {
