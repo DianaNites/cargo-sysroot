@@ -191,11 +191,16 @@ impl SysrootBuilder {
         self
     }
 
-    /// Custom flags to pass to `rustc` compiler invocations.
+    /// Custom flags to pass to **all** `rustc` compiler invocations.
     ///
     /// This *adds* to, not *replaces*, any previous calls to this method.
     ///
     /// By default this is empty.
+    ///
+    /// # Internal
+    ///
+    /// This will use the `RUSTFLAGS` to ensure flags are set for all
+    /// invocations.
     pub fn rustc_flags<I, S>(&mut self, flags: I) -> &mut Self
     where
         I: IntoIterator<Item = S>,
@@ -431,7 +436,15 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
         .arg("-Z")
         // The rust build system only passes this for rustc? xbuild passes this for alloc. 🤷‍♀️
         .arg("force-unstable-if-unmarked")
-        .args(&builder.rustc_flags)
+        .env(
+            "RUSTFLAGS",
+            builder
+                .rustc_flags
+                .iter()
+                .map(|s| s.to_str().unwrap().to_string())
+                .collect::<Vec<String>>()
+                .join(" "),
+        )
         .status()
         .context("Build failed")?;
     if !exit.success() {
