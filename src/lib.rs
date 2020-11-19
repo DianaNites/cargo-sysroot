@@ -425,7 +425,7 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
     let target_dir = builder.output.join("target");
 
     // TODO: Eat output if up to date? Always? On error?
-    let exit = Command::new(env::var_os("CARGO").context("Couldn't find cargo command")?)
+    let exit = Command::new(env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
         .arg("rustc")
         .arg("--release")
         .arg("--target")
