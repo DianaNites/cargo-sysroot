@@ -201,6 +201,9 @@ impl SysrootBuilder {
     ///
     /// This will use the `RUSTFLAGS` to ensure flags are set for all
     /// invocations.
+    ///
+    /// Flags passed to this method will be *appended*
+    /// to any existing `RUSTFLAGS`.
     pub fn rustc_flags<I, S>(&mut self, flags: I) -> &mut Self
     where
         I: IntoIterator<Item = S>,
@@ -436,15 +439,17 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
         .arg("-Z")
         // The rust build system only passes this for rustc? xbuild passes this for alloc. 🤷‍♀️
         .arg("force-unstable-if-unmarked")
-        .env(
-            "RUSTFLAGS",
-            builder
-                .rustc_flags
-                .iter()
-                .map(|s| s.to_str().unwrap().to_string())
-                .collect::<Vec<String>>()
-                .join(" "),
-        )
+        .env("RUSTFLAGS", {
+            let mut env = OsString::new();
+            if let Some(exist) = std::env::var_os("RUSTFLAGS") {
+                env.push(exist);
+            }
+            for flag in &builder.rustc_flags {
+                env.push(" ");
+                env.push(flag)
+            }
+            env
+        })
         .status()
         .context("Build failed")?;
     if !exit.success() {
