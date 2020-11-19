@@ -480,8 +480,7 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
 /// The output artifact directory
 ///
 /// Not part of the public API.
-#[doc(hidden)]
-pub fn artifact_dir(sysroot_dir: &Path, target: &Path) -> Result<PathBuf> {
+fn artifact_dir(sysroot_dir: &Path, target: &Path) -> Result<PathBuf> {
     Ok(sysroot_dir
         .join("lib")
         .join("rustlib")
