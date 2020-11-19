@@ -37,12 +37,6 @@ pub struct Sysroot {
     /// Some use-cases require the sysroot crates be built with this matching.
     #[structopt(skip)]
     pub cargo_profile: Option<Profile>,
-
-    /// Where to put the built sysroot artifacts.
-    /// This should point to somewhere in the new sysroot.
-    /// Example: sysroot/lib/rustlib/target-triple/lib
-    #[structopt(skip)]
-    pub sysroot_artifact_dir: Option<PathBuf>,
 }
 
 #[derive(StructOpt, Debug)]

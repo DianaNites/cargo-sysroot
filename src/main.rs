@@ -96,14 +96,6 @@ fn main() -> Result<()> {
     }
 
     args.cargo_profile = toml.profile;
-    if args.sysroot_artifact_dir.is_none() {
-        args.sysroot_artifact_dir = Some(artifact_dir(
-            &args.sysroot_dir,
-            args.target
-                .as_ref()
-                .context("BUG: Somehow missing target triple")?,
-        )?);
-    }
 
     clean_artifacts(&args.sysroot_dir)?;
     fs::create_dir_all(&args.sysroot_dir).context("Couldn't create sysroot directory")?;
