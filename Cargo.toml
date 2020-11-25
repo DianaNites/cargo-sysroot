@@ -1,6 +1,6 @@
 [package]
 name = "cargo-sysroot"
-version = "0.8.0-alpha"
+version = "0.8.0"
 authors = ["Diana"]
 #
 readme = "README.md"
