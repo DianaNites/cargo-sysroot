@@ -450,6 +450,9 @@ fn build_alloc(alloc_cargo_toml: &Path, builder: &SysrootBuilder) -> Result<()> 
             }
             env
         })
+        // Causes clippy to leak output
+        // See #6
+        .env_remove("RUSTC_WORKSPACE_WRAPPER")
         .status()
         .context("Couldn't find/run cargo command")?;
     if !exit.success() {
