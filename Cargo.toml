@@ -20,7 +20,7 @@ edition = "2018"
 fs_extra = "1.2.0"
 structopt = { version = "0.3.21", optional = true }
 cargo-toml2 = "1.3.2"
-anyhow = "1.0.34"
+anyhow = "1.0.38"
 remove_dir_all = "0.6.1"
 
 [dev-dependencies]
