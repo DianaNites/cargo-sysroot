@@ -24,7 +24,7 @@ anyhow = "1.0.38"
 remove_dir_all = "0.6.1"
 
 [dev-dependencies]
-tempfile = "3.2.0"
+tempfile = "3.3.0"
 
 [badges]
 maintenance = { status = "experimental" }
